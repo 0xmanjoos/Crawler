@@ -2,6 +2,7 @@
 #include <stdlib.h>
 // #include "chilkat/CkSpider.h"
 #include "PriorityQueue.h"
+#include "Url.h"
 
 using namespace std;
 
@@ -57,6 +58,49 @@ using namespace std;
 int main(){
 
     PriorityQueue queue;
+    // Url url;
+
+    Url url;
+
+    url.setUrl("https://ufmg.br");
+    cout << "Avaliating " << url.getUrl() << endl;
+    cout << "URL size: " << url.getSize() << endl << endl;
+    queue.queueURL(url);
+
+	url.setUrl("http://www.ufmg.br");
+    cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	url.setUrl("http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php");
+	cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	url.setUrl("www.ufmg.br");
+	cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	url.setUrl("http://dcc.ufmg.br/~nivio");
+	cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	url.setUrl("http://dcc.ufmg.br/~nivio/teaching");
+	cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	url.setUrl("");
+	cout << "Avaliating " << url.getUrl() << endl;
+	cout << "URL size: " << url.getSize() << endl << endl;
+	queue.queueURL(url);
+
+	cout << "Dequeueing" << endl;
+	while(queue.getSize()>0){
+		url = queue.dequeueURL();
+	}
 
     return 0;
 }

@@ -4,41 +4,7 @@
 
 PriorityQueue::PriorityQueue(){
 	this->size = 0;
-
-	CkString url;
-
-	url = "https://ufmg.br";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "http://www.ufmg.br";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "www.ufmg.br";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "http://dcc.ufmg.br/~nivio";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "http://dcc.ufmg.br/~nivio/teaching";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	url = "";
-	cout << "Avaliating " << url.getString() << endl;
-	cout << "URL size: " << this->getURLsize(url) << endl << endl;
 }
-
-// PriorityQueue::PriorityQueue(PriorityQueue q){
-// 	this = q;
-// }
 
 // Destructor
 
@@ -48,88 +14,28 @@ PriorityQueue::~PriorityQueue(){
 	// del(list); // ?
 }
 
-int PriorityQueue::getURLsize(CkString url){
-	CkString canonicalized_url, domain_url, clean_url, path_url, aux_ckstr;
-	string aux_str;
-	CkStringArray *aux;
-	int domain_size = 0, size = 0;
-	CkSpider spider;
-
-	spider.CanonicalizeUrl(url.getString(), canonicalized_url); // Canonicalizing URL
-	
-	// printf("\tURL: %s\n", url.getString());
-	printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
-
-	clean_url = this->cleaningURL(url.getString());
-	cout << "\tClean URL: " << clean_url.getString() << endl;
-
-	// Check if there is something after "http[s]?://""
-	if (clean_url.getNumChars() <= 0){
-		return 0;
-	}
-
-	// 
-	// /* Separating path */
-	// aux_str = string(clean_url.getString());
-	// aux_str = aux_str.erase(0,string(domain_url).size()+1);
-
-	// cout << "\tPath: " << aux_str << endl;
-	// 
-
-	// Counting path's size (www.ufmg.br -> size = 3)	
-	aux = clean_url.split('/', true, true, false);
-	size += aux->get_Count()-1; // -1 because it is ignoring the domain, which will be considered later
-
-	// Counting domain's size (www.ufmg.br -> size = 3)
-	aux->StrAt(0, aux_ckstr);
-	aux = aux_ckstr.split('.', true, true, false);
-	size += aux->get_Count();
-
-	// printf("\tURL size: %d\n\n", size);
-
-
-	return size;
-
-}
-
-void PriorityQueue::queueURL(char* url){
-	if (this->getURLsize(url) > 0){
-		// this->list.
+void PriorityQueue::queueURL(Url url){
+	if (url.getSize() > 0){
+		cout << "\tQueueing " << url.getUrl() << endl;
+		this->list.push(url);
+		this->size++;
 	}
 
 }
 
-// Remove "http[s]?://" from url
-char* PriorityQueue::cleaningURL(string url){
-	string http ("http");
-	string delimitation ("://");
-	string new_url = url;
-	size_t found = url.find(http); // Locate the position where "http" starts in the url
+Url PriorityQueue::dequeueURL(){
+	Url url;
 
-	// Test if "http" is within the url
-	if (found!=std::string::npos){
-		// Teste if "http" starts in the beginning of the url
-		if (!found){
-			// Locate the position where "://" starts in the url
-			found = url.find(delimitation, http.size());
-			// Tests if "://" is within the url
-			if (found!=std::string::npos){
-				// Remove "http[s]?://" from the url
-				new_url = url.erase(0,found+delimitation.size());
-			}
-		}
-
+	if (!this->list.empty()){
+		url = this->list.top();
+		this->list.pop();
+		cout << "\tDequeueing " << url.getUrl() << endl;
+		this->size--;
 	}
 
-	// Converting string to char*
-	char* final_url = new char[new_url.size()+1];
-	std::copy(new_url.begin(), new_url.end(), final_url);
-	final_url[new_url.size()] = '\0';
-
-	return final_url;
+	return url;
 }
 
-
-string PriorityQueue::getURL(){
-
+int PriorityQueue::getSize(){
+	return this->size;
 }
