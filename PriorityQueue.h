@@ -15,16 +15,15 @@ class PriorityQueue {
 
 private:
 
-	priority_queue<char*, std::vector<char*>, comparator> list;
+	// priority_queue<Url*, vector<Url*>, CompareURL> list;
 	int size;
 
-	int getURLsize(CkString url);
+	// int getURLsize(CkString url);
 	char* cleaningURL(string url);
 	
 public:
 	// Constructors
 	PriorityQueue();
-	PriorityQueue(vector<string> list, int size);
 	// PriorityQueue(PriorityQueue *q);
 
 	// Destructor
@@ -35,6 +34,8 @@ public:
 
 	// Getters
 	string getURL();
+
+	int getURLsize(CkString url);
 
 };
 

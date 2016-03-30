@@ -36,11 +36,6 @@ PriorityQueue::PriorityQueue(){
 	cout << "URL size: " << this->getURLsize(url) << endl << endl;
 }
 
-PriorityQueue::PriorityQueue(vector<string> list, int size){
-	this->size = size;
-	this->list = list;
-}
-
 // PriorityQueue::PriorityQueue(PriorityQueue q){
 // 	this = q;
 // }
