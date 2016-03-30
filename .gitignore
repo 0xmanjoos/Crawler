@@ -2,3 +2,5 @@
 *.o
 *.txt
 tests/*
+crawler
+TODO
