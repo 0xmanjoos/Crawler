@@ -4,41 +4,16 @@
 
 Url::Url(){
 	this->size = 0;
-
-	// CkString url;
-
-	// url = "https://ufmg.br";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "http://www.ufmg.br";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "www.ufmg.br";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "http://dcc.ufmg.br/~nivio";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "http://dcc.ufmg.br/~nivio/teaching";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
-
-	// url = "";
-	// cout << "Avaliating " << url.getString() << endl;
-	// cout << "URL size: " << this->getURLsize(url) << endl << endl;
 }
 
 Url::Url(char* url){
 	this->url = url;
-	this->size = this->getURLsize(url);
+	this->size = this->getURLsize((char*) url);
+}
+
+Url::Url(string url){
+	this->url = url;
+	this->size = this->getURLsize((char*) url.c_str());
 }
 
 Url::Url(CkString url){
@@ -54,19 +29,20 @@ Url::~Url(){
 	// del(list); // ?
 }
 
-int Url::getURLsize(CkString url){
+int Url::getURLsize(char* url){
 	CkString canonicalized_url, domain_url, clean_url, path_url, aux_ckstr;
 	string aux_str;
 	CkStringArray *aux;
 	int domain_size = 0, size = 0;
 	CkSpider spider;
 
-	spider.CanonicalizeUrl(url.getString(), canonicalized_url); // Canonicalizing URL
+
+	spider.CanonicalizeUrl(url, canonicalized_url); // Canonicalizing URL
 	
 	// printf("\tURL: %s\n", url.getString());
 	// printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
 
-	clean_url = this->cleaningURL(url.getString());
+	clean_url = this->cleaningURL(url);
 	// cout << "\tClean URL: " << clean_url.getString() << endl;
 
 	// Check if there is something after "http[s]?://""
@@ -131,7 +107,13 @@ char* Url::cleaningURL(string url){
 
 void Url::setUrl(char* url){
 	this->url = (char*) url;
-	this->size = this->getURLsize((char*)url);
+	this->size = this->getURLsize((char*) url);
+}
+
+void Url::setUrl(string url){
+	this->url = url;
+	this->size = this->getURLsize((char*) url.c_str());
+	// cout << "\tWord In: " << this->url << endl;
 }
 
 void Url::setUrl(const char* url){
@@ -140,27 +122,26 @@ void Url::setUrl(const char* url){
 	// strncpy(this->url, url, len);
 	// this->url[len] = '\0';
 	// this->size = this->getURLsize(url);
-	this->url = (char*) url;
+	this->url = url;
 	this->size = this->getURLsize((char*) url);
 }
 
 void Url::setUrl(CkString url){
 	this->url = (char*) url.getString();
 	this->size = this->getURLsize((char*) url.getString());
-	cout << "\tWord In: " << (char*)url.getString() << endl;
+	// cout << "\tWord In: " << this->url << endl;
 }
 
-char* Url::getUrl(){
-	return (char*) this->url;
+string Url::getUrl(){
+	return this->url;
 }
 
-char* Url::getUrl() const {
-	return (char*) this->url;
+string Url::getUrl() const {
+	return this->url;
 }
 
 int Url::getSize(){
-	int size = this->size;
-	return size;
+	return (int) size;
 }
 
 int Url::getSize() const {

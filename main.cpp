@@ -11,13 +11,13 @@ using namespace std;
 int main(){
 	CkSpider spider;
 	CkString ckurl, domain;
-	// Url url;
-	string url;
+	Url url;
+	// string url;
 	bool success;
 	int i, size_unspired;
 	PriorityQueue queue;
 	vector<Url> waitlist;
-	// Url url;
+	//- Url url;
 
 	ckurl = "http://www.joelonsoftware.com/";
 
@@ -36,20 +36,24 @@ int main(){
 
 		size_unspired = spider.get_NumUnspidered();
 		for (i = 0; i < size_unspired; i++){
-		// for (i = 0; i < 50; i++){
 			spider.GetUnspideredUrl(0, ckurl);
-			// url.setUrl(ckurl);
-			url = ckurl.getString();
-			queue.queueURL(url);
-			// cout << i << ". ";
-			// url.setUrl(ckurl);
+			url.setUrl(ckurl);
+
 			spider.SkipUnspidered(0);
-			// sleep(1);
-			// cout << i << ". " << url.getUrl() << endl;
-			// queue.queueURL(url);
-			cout << i << ".\t" << ckurl.getString() << endl;
-			// cout << "\tSaved URL: " << url.getUrl() << endl << endl;
-			cout << "\tSaved URL: " << url << endl << endl;
+
+			cout << i << ".\t" << url.getUrl() << endl;
+			queue.queueURL(url);
+		}
+
+		cout << endl << endl;
+
+		size_unspired = spider.get_NumOutboundLinks();
+
+		for (i = 0; i < size_unspired; i++){
+			spider.GetOutboundLink(i, ckurl);
+			url.setUrl(ckurl);
+			cout << i << ". " << ckurl.getString() << endl;
+			queue.queueURL(url);
 		}
 
 		cout << "=============" << endl << endl;
@@ -59,21 +63,10 @@ int main(){
 		i = 0;
 		while (queue.getSize() > 0){
 			url = queue.dequeueURL();
-			// sleep(2);
-			// cout << i << ". " << url.getUrl() << endl;
-			cout << i << ". " << url << endl;
+			cout << i << ". " << url.getUrl() << endl;
 			i++;
 		}
 
-		size_unspired = spider.get_NumOutboundLinks();
-
-		// for (i = 0; i < size_unspired; i++){
-		for (i = 0; i < 0; i++){
-			spider.GetOutboundLink(i, ckurl);
-			// url.setUrl(ckurl);
-			// cout << i << ". " << ckurl.getString() << endl;
-			// queue.queueURL(url);
-		}
 		spider.ClearOutboundLinks();
 		cout << spider.get_NumOutboundLinks() << endl;
 	}

@@ -15,16 +15,17 @@ using namespace std;
 class Url {
 
 private:
-	char* url;
+	string url;
 	int size;
 
 	char* cleaningURL(string url);
-	int getURLsize(CkString url);
+	int getURLsize(char* url);
 	
 public:
 	// Constructors
 	Url();
 	Url(char* url);
+	Url(string url);
 	Url(CkString url);
 
 	// Destructor
@@ -32,12 +33,13 @@ public:
 
 	// Setters
 	void setUrl(char* url);
+	void setUrl(string url);
 	void setUrl(const char* url);
 	void setUrl(CkString url);
 
 	// Getters
-	char* getUrl();
-	char* getUrl() const;
+	string getUrl();
+	string getUrl() const;
 	int getSize();
 	int getSize() const;
 
