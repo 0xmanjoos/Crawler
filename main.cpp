@@ -3,8 +3,82 @@
 // #include "chilkat/CkSpider.h"
 #include "PriorityQueue.h"
 #include "Url.h"
+#include <unistd.h>
 
 using namespace std;
+
+
+int main(){
+	CkSpider spider;
+	CkString ckurl, domain;
+	// Url url;
+	string url;
+	bool success;
+	int i, size_unspired;
+	PriorityQueue queue;
+	vector<Url> waitlist;
+	// Url url;
+
+	ckurl = "http://www.joelonsoftware.com/";
+
+	spider.GetUrlDomain(ckurl.getString(), domain);
+
+	spider.Initialize(domain.getString());
+
+	spider.AddUnspidered(ckurl.getString());
+
+	success = spider.CrawlNext();
+
+	if (success) { 
+
+		cout << spider.get_NumUnspidered() << endl;
+		cout << spider.get_NumOutboundLinks() << endl;
+
+		size_unspired = spider.get_NumUnspidered();
+		for (i = 0; i < size_unspired; i++){
+		// for (i = 0; i < 50; i++){
+			spider.GetUnspideredUrl(0, ckurl);
+			// url.setUrl(ckurl);
+			url = ckurl.getString();
+			queue.queueURL(url);
+			// cout << i << ". ";
+			// url.setUrl(ckurl);
+			spider.SkipUnspidered(0);
+			// sleep(1);
+			// cout << i << ". " << url.getUrl() << endl;
+			// queue.queueURL(url);
+			cout << i << ".\t" << ckurl.getString() << endl;
+			// cout << "\tSaved URL: " << url.getUrl() << endl << endl;
+			cout << "\tSaved URL: " << url << endl << endl;
+		}
+
+		cout << "=============" << endl << endl;
+
+		cout << endl << endl;
+
+		i = 0;
+		while (queue.getSize() > 0){
+			url = queue.dequeueURL();
+			// sleep(2);
+			// cout << i << ". " << url.getUrl() << endl;
+			cout << i << ". " << url << endl;
+			i++;
+		}
+
+		size_unspired = spider.get_NumOutboundLinks();
+
+		// for (i = 0; i < size_unspired; i++){
+		for (i = 0; i < 0; i++){
+			spider.GetOutboundLink(i, ckurl);
+			// url.setUrl(ckurl);
+			// cout << i << ". " << ckurl.getString() << endl;
+			// queue.queueURL(url);
+		}
+		spider.ClearOutboundLinks();
+		cout << spider.get_NumOutboundLinks() << endl;
+	}
+
+}
 
 // int main()
 //     {
@@ -55,52 +129,52 @@ using namespace std;
 //     printf("\n");
 //     }
 
-int main(){
+// int main(){
 
-    PriorityQueue queue;
-    // Url url;
+//     PriorityQueue queue;
+//     // Url url;
 
-    Url url;
+//     Url url;
 
-    url.setUrl("https://ufmg.br");
-    cout << "Avaliating " << url.getUrl() << endl;
-    cout << "URL size: " << url.getSize() << endl << endl;
-    queue.queueURL(url);
+//     url.setUrl("https://ufmg.br");
+//     cout << "Avaliating " << url.getUrl() << endl;
+//     cout << "URL size: " << url.getSize() << endl << endl;
+//     queue.queueURL(url);
 
-	url.setUrl("http://www.ufmg.br");
-    cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("http://www.ufmg.br");
+//     cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	url.setUrl("http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php");
-	cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php");
+// 	cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	url.setUrl("www.ufmg.br");
-	cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("www.ufmg.br");
+// 	cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	url.setUrl("http://dcc.ufmg.br/~nivio");
-	cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("http://dcc.ufmg.br/~nivio");
+// 	cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	url.setUrl("http://dcc.ufmg.br/~nivio/teaching");
-	cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("http://dcc.ufmg.br/~nivio/teaching");
+// 	cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	url.setUrl("");
-	cout << "Avaliating " << url.getUrl() << endl;
-	cout << "URL size: " << url.getSize() << endl << endl;
-	queue.queueURL(url);
+// 	url.setUrl("");
+// 	cout << "Avaliating " << url.getUrl() << endl;
+// 	cout << "URL size: " << url.getSize() << endl << endl;
+// 	queue.queueURL(url);
 
-	cout << "Dequeueing" << endl;
-	while(queue.getSize()>0){
-		url = queue.dequeueURL();
-	}
+// 	cout << "Dequeueing" << endl;
+// 	while(queue.getSize()>0){
+// 		url = queue.dequeueURL();
+// 	}
 
-    return 0;
-}
+//     return 0;
+// }

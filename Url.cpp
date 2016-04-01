@@ -41,6 +41,11 @@ Url::Url(char* url){
 	this->size = this->getURLsize(url);
 }
 
+Url::Url(CkString url){
+	this->url = (char*) url.getString();
+	this->size = this->getURLsize((char*) url.getString());	
+}
+
 // Destructor
 
 Url::~Url(){
@@ -59,10 +64,10 @@ int Url::getURLsize(CkString url){
 	spider.CanonicalizeUrl(url.getString(), canonicalized_url); // Canonicalizing URL
 	
 	// printf("\tURL: %s\n", url.getString());
-	printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
+	// printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
 
 	clean_url = this->cleaningURL(url.getString());
-	cout << "\tClean URL: " << clean_url.getString() << endl;
+	// cout << "\tClean URL: " << clean_url.getString() << endl;
 
 	// Check if there is something after "http[s]?://""
 	if (clean_url.getNumChars() <= 0){
@@ -124,8 +129,33 @@ char* Url::cleaningURL(string url){
 }
 
 
+void Url::setUrl(char* url){
+	this->url = (char*) url;
+	this->size = this->getURLsize((char*)url);
+}
+
+void Url::setUrl(const char* url){
+	// size_t len = strlen(url);
+	// this->url = new char[len+1];
+	// strncpy(this->url, url, len);
+	// this->url[len] = '\0';
+	// this->size = this->getURLsize(url);
+	this->url = (char*) url;
+	this->size = this->getURLsize((char*) url);
+}
+
+void Url::setUrl(CkString url){
+	this->url = (char*) url.getString();
+	this->size = this->getURLsize((char*) url.getString());
+	cout << "\tWord In: " << (char*)url.getString() << endl;
+}
+
 char* Url::getUrl(){
-	return this->url;
+	return (char*) this->url;
+}
+
+char* Url::getUrl() const {
+	return (char*) this->url;
 }
 
 int Url::getSize(){
@@ -133,23 +163,6 @@ int Url::getSize(){
 	return size;
 }
 
-void Url::setUrl(char* url){
-	this->url = url;
-	this->size = this->getURLsize(url);
-}
-
-void Url::setUrl(const char* url){
-	size_t len = strlen(url);
-	this->url = new char[len+1];
-	strncpy(this->url, url, len);
-	this->url[len] = '\0';
-	this->size = this->getURLsize(url);
-}
-
-char* Url::getUrl() const {
-	return this->url;
-}
-
 int Url::getSize() const {
-	return size;
+	return (int) size;
 }

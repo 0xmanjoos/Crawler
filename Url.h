@@ -7,6 +7,7 @@
 #include <cstring>
 #include <queue>
 #include "chilkat/CkSpider.h"
+#include "chilkat/CkString.h"
 #include "chilkat/CkStringArray.h"
 
 using namespace std;
@@ -24,6 +25,7 @@ public:
 	// Constructors
 	Url();
 	Url(char* url);
+	Url(CkString url);
 
 	// Destructor
 	~Url();
@@ -31,12 +33,12 @@ public:
 	// Setters
 	void setUrl(char* url);
 	void setUrl(const char* url);
+	void setUrl(CkString url);
 
 	// Getters
 	char* getUrl();
-	int getSize();
-
 	char* getUrl() const;
+	int getSize();
 	int getSize() const;
 
 };
