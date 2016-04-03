@@ -1,7 +1,6 @@
 #ifndef URL_H
 #define URL_H
 
-#include <iostream>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -40,8 +39,10 @@ public:
 	// Getters
 	string getUrl();
 	string getUrl() const;
+	string getCleanUrl();
 	int getSize();
 	int getSize() const;
+	string getNormalizedUrl();
 
 };
 

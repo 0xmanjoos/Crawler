@@ -1,14 +1,8 @@
 #ifndef PRIORITYQUEUE_H
 #define PRIORITYQUEUE_H
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <queue>
-#include "chilkat/CkSpider.h"
-#include "chilkat/CkString.h"
-#include "chilkat/CkStringArray.h"
 #include "Url.h"
+#include <unordered_map> // C++11 Hash Table
 
 using namespace std;
 
@@ -23,6 +17,7 @@ class PriorityQueue {
 private:
 
 	priority_queue<Url, std::vector<Url>, CompareURL> list;
+	unordered_map<string, char> queued_url;
 	int size;
 	
 public:

@@ -16,21 +16,24 @@ PriorityQueue::~PriorityQueue(){
 
 void PriorityQueue::queueURL(Url url){
 	if (url.getSize() > 0){
-	// if (url.size() > 0){
-		this->list.push(url);
-		cout << "\tQueueing " << url.getUrl() << endl;
-		this->size++;
+		if (this->queued_url[url.getUrl()] <= 0){
+			this->list.push(url);
+			// cout << "\tQueueing " << url.getUrl() << endl;
+			this->size++;
+			this->queued_url.emplace(url.getUrl(), 1);
+			// cout << "Hashing: " << url.getUrl() << " " << this->queued_url[url.getUrl()] << endl;
+		}
 	}
 }
 
 Url PriorityQueue::dequeueURL(){
 	Url url;
 
-	url.setUrl("No URL");
+	// url.setUrl("No URL");
 
 	if (!this->list.empty()){
 		url.setUrl(this->list.top().getUrl());
-		cout << "\tDequeueing " << url.getUrl() << endl;
+		// cout << "\tDequeueing " << url.getUrl() << endl;
 		this->size--;
 		this->list.pop();
 	}

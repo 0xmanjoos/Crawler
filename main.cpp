@@ -1,74 +1,113 @@
 #include <iostream>
-#include <stdlib.h>
 // #include "chilkat/CkSpider.h"
 #include "PriorityQueue.h"
-#include "Url.h"
-#include <unistd.h>
+// #include <unistd.h>
+#include <chrono> // C++11 Time lib
+#include <unordered_map> // C++11 Hash Table
 
 using namespace std;
-
+using namespace std::chrono;
 
 int main(){
+	int i, size_unspired;
+	bool success;
+
 	CkSpider spider;
 	CkString ckurl, domain;
+
 	Url url;
-	// string url;
-	bool success;
-	int i, size_unspired;
 	PriorityQueue queue;
-	vector<Url> waitlist;
-	//- Url url;
+	
+	unordered_map<string, int> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 
-	ckurl = "http://www.joelonsoftware.com/";
+	high_resolution_clock::time_point t1, t2;
+	
+	// url.setUrl("http://www.chilkatsoft.com/crawlStart.html");
+	url.setUrl("http://www.joelonsoftware.com");
+	queue.queueURL(url);
 
-	spider.GetUrlDomain(ckurl.getString(), domain);
+	// visited_url.emplace(url.getUrl(), 1);
+	url.setUrl("http://stackoverflow.com/");
+	visited_url.emplace("http://stackoverflow.com/", 1);
+	// 
 
-	spider.Initialize(domain.getString());
+	cout << visited_url["nana"] << " " << visited_url[url.getUrl()]  << endl;
 
-	spider.AddUnspidered(ckurl.getString());
+	if (!visited_url["http://stackoverflow.com/"]){
+		cout << "nana" << endl;
+		queue.queueURL(url);
+	}
 
-	success = spider.CrawlNext();
+	while (queue.getSize() > 0){
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+		url = queue.dequeueURL();
+		// if (!visited_url[url.getUrl()]){
+		if (true){
+			visited_url.emplace(url.getUrl(), 1);
+			// cout << url.getCleanUrl() << endl;
 
-	if (success) { 
+			ckurl = url.getUrl().c_str();
 
-		cout << spider.get_NumUnspidered() << endl;
-		cout << spider.get_NumOutboundLinks() << endl;
+			spider.GetUrlDomain(ckurl.getString(), domain);
 
-		size_unspired = spider.get_NumUnspidered();
-		for (i = 0; i < size_unspired; i++){
-			spider.GetUnspideredUrl(0, ckurl);
-			url.setUrl(ckurl);
+			spider.Initialize(domain.getString());
 
-			spider.SkipUnspidered(0);
+			spider.AddUnspidered(ckurl.getString());
 
-			cout << i << ".\t" << url.getUrl() << endl;
-			queue.queueURL(url);
+			success = spider.CrawlNext();
+
+			if (success) { 
+				cout << "Evaluating " << url.getUrl() << endl;
+
+				// cout << spider.get_NumUnspidered() << endl;
+				// cout << spider.get_NumOutboundLinks() << endl;
+
+				// char aux;
+				size_unspired = spider.get_NumUnspidered();
+				for (i = 0; i < size_unspired; i++){
+					spider.GetUnspideredUrl(0, ckurl);
+					url.setUrl(ckurl);
+					spider.SkipUnspidered(0);
+					// cout << i << ".\t" << url.getUrl() << endl;
+					if (!visited_url[url.getNormalizedUrl()]){
+						queue.queueURL(url);
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  1;
+						// cout << "Value: " << (int) visited_url[url.getUrl()] << endl;
+						// cin >> aux;
+					}
+				}
+
+				// cout << endl << endl;
+
+				size_unspired = spider.get_NumOutboundLinks();
+
+				for (i = 0; i < size_unspired; i++){
+					spider.GetOutboundLink(i, ckurl);
+					url.setUrl(ckurl);
+					// cout << i << ". " << ckurl.getString() << endl;
+					if (!visited_url[url.getNormalizedUrl()]){
+						queue.queueURL(url);
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  1;
+					}
+				}
+
+				// cout << "=============" << endl << endl;
+
+				// cout << endl << endl;
+
+				// i = 0;
+
+				spider.ClearOutboundLinks();
+				// cout << spider.get_NumOutboundLinks() << endl;
+				// cout << spider.get_NumUnspidered() << endl;
+				high_resolution_clock::time_point t2 = high_resolution_clock::now();
+				auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+				cout << "\tElapsed time: " << duration << " ms." << endl << endl;
+			}
+
 		}
-
-		cout << endl << endl;
-
-		size_unspired = spider.get_NumOutboundLinks();
-
-		for (i = 0; i < size_unspired; i++){
-			spider.GetOutboundLink(i, ckurl);
-			url.setUrl(ckurl);
-			cout << i << ". " << ckurl.getString() << endl;
-			queue.queueURL(url);
-		}
-
-		cout << "=============" << endl << endl;
-
-		cout << endl << endl;
-
-		i = 0;
-		while (queue.getSize() > 0){
-			url = queue.dequeueURL();
-			cout << i << ". " << url.getUrl() << endl;
-			i++;
-		}
-
-		spider.ClearOutboundLinks();
-		cout << spider.get_NumOutboundLinks() << endl;
 	}
 
 }

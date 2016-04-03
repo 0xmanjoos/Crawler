@@ -140,10 +140,37 @@ string Url::getUrl() const {
 	return this->url;
 }
 
+string Url::getCleanUrl(){
+	string url = this->cleaningURL(this->url);
+
+	return url;
+}
+
 int Url::getSize(){
 	return (int) size;
 }
 
 int Url::getSize() const {
 	return (int) size;
+}
+
+string Url::getNormalizedUrl(){
+	string url = this->cleaningURL(this->url);
+	string delimitation ("www.");
+
+	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
+
+	// Test if "www." is within the url
+	if (found!=std::string::npos){
+		// Teste if "www." starts in the beginning of the url
+		if (!found){
+			url = url.erase(0,found+delimitation.size());
+		}
+	}
+
+	if (url.back() == '/'){
+		url.pop_back();
+	}
+
+	return url;
 }
