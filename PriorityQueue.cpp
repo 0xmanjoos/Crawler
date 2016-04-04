@@ -16,13 +16,9 @@ PriorityQueue::~PriorityQueue(){
 
 void PriorityQueue::queueURL(Url url){
 	if (url.getSize() > 0){
-		if (this->queued_url[url.getUrl()] <= 0){
-			this->list.push(url);
-			// cout << "\tQueueing " << url.getUrl() << endl;
-			this->size++;
-			this->queued_url.emplace(url.getUrl(), 1);
-			// cout << "Hashing: " << url.getUrl() << " " << this->queued_url[url.getUrl()] << endl;
-		}
+		this->list.push(url);
+		// cout << "\tQueueing " << url.getUrl() << endl;
+		this->size++;
 	}
 }
 

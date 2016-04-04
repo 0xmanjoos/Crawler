@@ -17,7 +17,6 @@ class PriorityQueue {
 private:
 
 	priority_queue<Url, std::vector<Url>, CompareURL> list;
-	unordered_map<string, char> queued_url;
 	int size;
 	
 public:
