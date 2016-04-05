@@ -1,11 +1,14 @@
+SHELL := /bin/bash
+
 UNAME_S := $(shell uname -s)
-FLAGS += -lresolv -lpthread
+TOP := $(shell pwd)
 ifeq ($(UNAME_S),Linux)
-    FLAGS += libchilkat.so
+    FLAGS += $(TOP)/chilkat/lib/libchilkat-9.5.0.so
 endif
 ifeq ($(UNAME_S),Darwin)
-    FLAGS += libchilkat.a
+    FLAGS += chilkat/lib/libchilkat.a
 endif
+FLAGS += -lresolv -lpthread
 
 crawler: main.o queue.o url.o
 	g++ -std=c++11 main.o PriorityQueue.o Url.o $(FLAGS) -o crawler
