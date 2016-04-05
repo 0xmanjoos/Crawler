@@ -34,7 +34,7 @@ int main(){
 	vector<string> initial_url = {"http://www.joelonsoftware.com","http://www.ufmg.br"};
 	vector<thread> ths;
 
-	logs.open("logs/log.txt", std::ofstream::out);
+	logs.open("logs/log.csv", std::ofstream::out);
 	logs << "time(ms),size(bytes)" << endl;
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
