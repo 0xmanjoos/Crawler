@@ -18,7 +18,8 @@ private:
 	int size;
 
 	char* cleaningURL(string url);
-	int getURLsize(char* url);
+	int getURLsize(string url);
+	string canonicalizeUrl(string url);
 	
 public:
 	// Constructors
@@ -26,6 +27,7 @@ public:
 	Url(char* url);
 	Url(string url);
 	Url(CkString url);
+	Url(Url const& url);
 
 	// Destructor
 	~Url();

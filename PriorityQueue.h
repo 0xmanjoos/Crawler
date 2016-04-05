@@ -2,7 +2,6 @@
 #define PRIORITYQUEUE_H
 
 #include "Url.h"
-#include <unordered_map> // C++11 Hash Table
 
 using namespace std;
 

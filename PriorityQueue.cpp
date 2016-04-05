@@ -15,6 +15,7 @@ PriorityQueue::~PriorityQueue(){
 }
 
 void PriorityQueue::queueURL(Url url){
+	// cout << "\tQueueing " << url.getUrl() << endl;
 	if (url.getSize() > 0){
 		this->list.push(url);
 		// cout << "\tQueueing " << url.getUrl() << endl;
@@ -23,7 +24,7 @@ void PriorityQueue::queueURL(Url url){
 }
 
 Url PriorityQueue::dequeueURL(){
-	Url url;
+	Url url ((char*)"");
 
 	// url.setUrl("No URL");
 

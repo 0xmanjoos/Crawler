@@ -1,212 +1,247 @@
 #include <iostream>
-// #include "chilkat/CkSpider.h"
-#include "PriorityQueue.h"
-// #include <unistd.h>
+#include <fstream>
 #include <chrono> // C++11 Time lib
 #include <unordered_map> // C++11 Hash Table
+#include <thread> // C++1 Threads
+#include <mutex> // C++11 mutex
+#include "PriorityQueue.h"
+
+#define NUM_THREADS 50
+#define FILENAME "htmls/html_files"
+#define LIMITE_FILE_SIZE 3000000
 
 using namespace std;
 using namespace std::chrono;
 
+PriorityQueue urls_queue;
+unordered_map<string, int> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
+ofstream logs, html_files;
+int index_file = 0;
+CkString buffer;
+
+mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex;
+
+
+void crawling(int id);
+void initializing_queue(vector<string> v);
+
 int main(){
+	int i;
+	Url url;
+
+	vector<string> initial_url = {"http://www.joelonsoftware.com","http://www.ufmg.br"};
+	vector<thread> ths;
+
+	logs.open("logs/log.txt", std::ofstream::out);
+
+	initializing_queue(initial_url);
+
+	for (i = 0; i < NUM_THREADS; i++){
+		ths.push_back(thread(&crawling, i));
+	}
+
+	for (auto& th : ths) {
+        th.join();
+    }
+
+    logs.close();
+
+	return 0;
+
+
+	////////////////////////////////////////////////////////
+}
+
+void crawling(int id){
 	int i, size_unspired;
 	bool success;
+	string logging;
+
+	CkSpider spider;
+	CkString ckurl, domain, html;
+
+	high_resolution_clock::time_point t1, t2;
+
+	while (urls_queue.getSize()>0){
+		Url url;
+
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+		urls_queue_mutex.lock();
+		url = urls_queue.dequeueURL();
+		urls_queue_mutex.unlock();
+
+		ckurl = url.getUrl().c_str();
+
+		spider.GetUrlDomain(ckurl.getString(), domain);
+
+		spider.Initialize(domain.getString());
+
+		spider.AddUnspidered(ckurl.getString());
+
+		success = spider.CrawlNext();
+
+		if (success) { 
+			// logging += "Evaluating " + url.getUrl() + "\n";
+			logging = url.getUrl();
+
+			spider.get_LastHtml(html);
+
+			buffer_mutex.lock();
+			buffer.appendUtf8("/\\/\\ ");
+			buffer.appendUtf8(url.getUrl().c_str());
+			buffer.appendUtf8("\n\n");
+			buffer.appendStr(html);
+
+			if (buffer.getSizeUtf8() > LIMITE_FILE_SIZE){
+				html_files.open(FILENAME+to_string(index_file));
+				html_files << buffer.getString();
+				buffer.clear();
+				index_file++;
+				html_files.close();
+			}
+			
+			buffer_mutex.unlock();
+
+			size_unspired = spider.get_NumUnspidered();
+			for (i = 0; i < size_unspired; i++){
+				spider.GetUnspideredUrl(0, ckurl);
+				url.setUrl(ckurl);
+				spider.SkipUnspidered(0);
+				// f << i << ".\t" << url.getUrl() << endl;
+				visited_url_mutex.lock();
+				if (!visited_url[url.getNormalizedUrl()]){
+					urls_queue_mutex.lock();
+					urls_queue.queueURL(url);
+					urls_queue_mutex.unlock();
+					// visited_url.emplace(url.getUrl(), 1);
+					visited_url[url.getNormalizedUrl()] =  1;
+					// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
+					// cin >> aux;
+				}
+				visited_url_mutex.unlock();
+			}
+
+			size_unspired = spider.get_NumOutboundLinks();
+
+			for (i = 0; i < size_unspired; i++){
+				spider.GetOutboundLink(i, ckurl);
+				url.setUrl(ckurl);
+				// f << i << ". " << ckurl.getString() << endl;
+				visited_url_mutex.lock();
+				if (!visited_url[url.getNormalizedUrl()]){
+					urls_queue_mutex.lock();
+					urls_queue.queueURL(url);
+					urls_queue_mutex.unlock();
+					// visited_url.emplace(url.getUrl(), 1);
+					visited_url[url.getNormalizedUrl()] =  1;
+				}
+				visited_url_mutex.unlock();
+			}
+			spider.ClearOutboundLinks();
+
+			high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+
+			// if (url.getUrl() != ""){
+				log_mutex.lock();
+				// cout << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
+				logs << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
+				log_mutex.unlock();
+			// }
+		}
+			
+		// logging += "\tElapsed time: " + to_string(duration) + " ms." + "\n";
+
+	}
+
+	log_mutex.lock();
+	logs << endl << "\t\tThread " << to_string(i) << " is dead." << endl << endl;
+	log_mutex.unlock();
+	// f.close();
+}
+
+void initializing_queue(vector<string> v){
+	int i, size_unspired;
+	bool success;
+	string logging;
+
+	Url url;
 
 	CkSpider spider;
 	CkString ckurl, domain;
 
-	Url url;
-	PriorityQueue queue;
-	
-	unordered_map<string, int> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
-
-	high_resolution_clock::time_point t1, t2;
-	
-	// url.setUrl("http://www.chilkatsoft.com/crawlStart.html");
-	url.setUrl("http://www.joelonsoftware.com");
-	queue.queueURL(url);
-
-	// visited_url.emplace(url.getUrl(), 1);
-	url.setUrl("http://stackoverflow.com/");
-	visited_url.emplace("http://stackoverflow.com/", 1);
-	// 
-
-	cout << visited_url["nana"] << " " << visited_url[url.getUrl()]  << endl;
-
-	if (!visited_url["http://stackoverflow.com/"]){
-		cout << "nana" << endl;
-		queue.queueURL(url);
+	for (i = 0; i < v.size(); i++){
+		url.setUrl(v[i]);
+		urls_queue.queueURL(url);
+		visited_url[url.getNormalizedUrl()] = 1;
 	}
 
-	while (queue.getSize() > 0){
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
-		url = queue.dequeueURL();
-		// if (!visited_url[url.getUrl()]){
-		if (true){
-			visited_url.emplace(url.getUrl(), 1);
-			// cout << url.getCleanUrl() << endl;
+	// Url url;
 
-			ckurl = url.getUrl().c_str();
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-			spider.GetUrlDomain(ckurl.getString(), domain);
+	url = urls_queue.dequeueURL();
 
-			spider.Initialize(domain.getString());
+	ckurl = url.getUrl().c_str();
 
-			spider.AddUnspidered(ckurl.getString());
+	spider.GetUrlDomain(ckurl.getString(), domain);
 
-			success = spider.CrawlNext();
+	spider.Initialize(domain.getString());
 
-			if (success) { 
-				cout << "Evaluating " << url.getUrl() << endl;
+	spider.AddUnspidered(ckurl.getString());
 
-				// cout << spider.get_NumUnspidered() << endl;
-				// cout << spider.get_NumOutboundLinks() << endl;
+	success = spider.CrawlNext();
 
-				// char aux;
-				size_unspired = spider.get_NumUnspidered();
-				for (i = 0; i < size_unspired; i++){
-					spider.GetUnspideredUrl(0, ckurl);
-					url.setUrl(ckurl);
-					spider.SkipUnspidered(0);
-					// cout << i << ".\t" << url.getUrl() << endl;
-					if (!visited_url[url.getNormalizedUrl()]){
-						queue.queueURL(url);
-						// visited_url.emplace(url.getUrl(), 1);
-						visited_url[url.getNormalizedUrl()] =  1;
-						// cout << "Value: " << (int) visited_url[url.getUrl()] << endl;
-						// cin >> aux;
-					}
-				}
+	if (success) { 
+		// logging += "Evaluating " + url.getUrl() + "\n";
+		logging = url.getUrl();
 
-				// cout << endl << endl;
-
-				size_unspired = spider.get_NumOutboundLinks();
-
-				for (i = 0; i < size_unspired; i++){
-					spider.GetOutboundLink(i, ckurl);
-					url.setUrl(ckurl);
-					// cout << i << ". " << ckurl.getString() << endl;
-					if (!visited_url[url.getNormalizedUrl()]){
-						queue.queueURL(url);
-						// visited_url.emplace(url.getUrl(), 1);
-						visited_url[url.getNormalizedUrl()] =  1;
-					}
-				}
-
-				// cout << "=============" << endl << endl;
-
-				// cout << endl << endl;
-
-				// i = 0;
-
-				spider.ClearOutboundLinks();
-				// cout << spider.get_NumOutboundLinks() << endl;
-				// cout << spider.get_NumUnspidered() << endl;
-				high_resolution_clock::time_point t2 = high_resolution_clock::now();
-				auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
-				cout << "\tElapsed time: " << duration << " ms." << endl << endl;
+		size_unspired = spider.get_NumUnspidered();
+		for (i = 0; i < size_unspired; i++){
+			spider.GetUnspideredUrl(0, ckurl);
+			url.setUrl(ckurl);
+			spider.SkipUnspidered(0);
+			// f << i << ".\t" << url.getUrl() << endl;
+			visited_url_mutex.lock();
+			if (!visited_url[url.getNormalizedUrl()]){
+				urls_queue_mutex.lock();
+				urls_queue.queueURL(url);
+				urls_queue_mutex.unlock();
+				// visited_url.emplace(url.getUrl(), 1);
+				visited_url[url.getNormalizedUrl()] =  1;
+				// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
+				// cin >> aux;
 			}
-
+			visited_url_mutex.unlock();
 		}
+
+		size_unspired = spider.get_NumOutboundLinks();
+
+		for (i = 0; i < size_unspired; i++){
+			spider.GetOutboundLink(i, ckurl);
+			url.setUrl(ckurl);
+			// f << i << ". " << ckurl.getString() << endl;
+			visited_url_mutex.lock();
+			if (!visited_url[url.getNormalizedUrl()]){
+				urls_queue_mutex.lock();
+				urls_queue.queueURL(url);
+				urls_queue_mutex.unlock();
+				// visited_url.emplace(url.getUrl(), 1);
+				visited_url[url.getNormalizedUrl()] =  1;
+			}
+			visited_url_mutex.unlock();
+		}
+
+		spider.ClearOutboundLinks();
+
+		high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+		auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+
+		log_mutex.lock();
+		logs << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
+		log_mutex.unlock();
 	}
-
 }
-
-// int main()
-//     {
-//     //  The Chilkat Spider component/library is free.
-//     CkSpider spider;
-//     const char *url = "http://www.chilkatsoft.com/crawlStart.html";
-//     const char *domain = "www.chilkatsoft.com";
-    
-//     printf("Started");//point 1
-
-//     //  The spider object crawls a single web site at a time.  As you'll see
-//     //  in later examples, you can collect outbound links and use them to
-//     //  crawl the web.  For now, we'll simply spider 10 pages of chilkatsoft.com
-//     spider.Initialize(domain);
-
-//      printf("Started");//point 2
-
-//     //  Add the 1st URL:
-//     spider.AddUnspidered(url);
-
-
-//     //  Begin crawling the site by calling CrawlNext repeatedly.
-//     long i;
-//     for (i = 0; i <= 9; i++) {
-//         bool success;
-//         success = spider.CrawlNext();
-//         if (success == true) {
-//             //  Show the URL of the page just spidered.
-//             printf("%s\n",spider.lastUrl());
-//             //  The HTML is available in the LastHtml property
-//         }
-//         else {
-//             //  Did we get an error or are there no more URLs to crawl?
-//             if (spider.get_NumUnspidered() == 0) {
-//                 printf("No more URLs to spider\n");
-//             }
-//             else {
-//                 printf("%s\n",spider.lastErrorText());
-//             }
-
-//         }
-
-//         //  Sleep 1 second before spidering the next URL.
-//         spider.SleepMs(1000);
-//         printf("End");
-//     }
-
-//     printf("\n");
-//     }
-
-// int main(){
-
-//     PriorityQueue queue;
-//     // Url url;
-
-//     Url url;
-
-//     url.setUrl("https://ufmg.br");
-//     cout << "Avaliating " << url.getUrl() << endl;
-//     cout << "URL size: " << url.getSize() << endl << endl;
-//     queue.queueURL(url);
-
-// 	url.setUrl("http://www.ufmg.br");
-//     cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	url.setUrl("http://dcc.ufmg.br/~nivio/br/teaching-ri-16.php");
-// 	cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	url.setUrl("www.ufmg.br");
-// 	cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	url.setUrl("http://dcc.ufmg.br/~nivio");
-// 	cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	url.setUrl("http://dcc.ufmg.br/~nivio/teaching");
-// 	cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	url.setUrl("");
-// 	cout << "Avaliating " << url.getUrl() << endl;
-// 	cout << "URL size: " << url.getSize() << endl << endl;
-// 	queue.queueURL(url);
-
-// 	cout << "Dequeueing" << endl;
-// 	while(queue.getSize()>0){
-// 		url = queue.dequeueURL();
-// 	}
-
-//     return 0;
-// }

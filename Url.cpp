@@ -7,18 +7,24 @@ Url::Url(){
 }
 
 Url::Url(char* url){
-	this->url = url;
-	this->size = this->getURLsize((char*) url);
+	this->url = this->canonicalizeUrl(url);
+	this->size = this->getURLsize(this->url);
 }
 
 Url::Url(string url){
-	this->url = url;
-	this->size = this->getURLsize((char*) url.c_str());
+	this->url = this->canonicalizeUrl(url);
+	this->size = this->getURLsize(this->url);
 }
 
 Url::Url(CkString url){
-	this->url = (char*) url.getString();
-	this->size = this->getURLsize((char*) url.getString());	
+	// this->url = (char*) url.getString();
+	this->url = this->canonicalizeUrl(url.getString());
+	this->size = this->getURLsize(this->url);
+}
+
+Url::Url(Url const& url){
+	this->url = url.getUrl();
+	this->size = url.getSize();
 }
 
 // Destructor
@@ -29,20 +35,18 @@ Url::~Url(){
 	// del(list); // ?
 }
 
-int Url::getURLsize(char* url){
+int Url::getURLsize(string url){
 	CkString canonicalized_url, domain_url, clean_url, path_url, aux_ckstr;
 	string aux_str;
 	CkStringArray *aux;
 	int domain_size = 0, size = 0;
-	CkSpider spider;
 
-
-	spider.CanonicalizeUrl(url, canonicalized_url); // Canonicalizing URL
+	canonicalized_url = this->canonicalizeUrl(url).c_str();
 	
 	// printf("\tURL: %s\n", url.getString());
 	// printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
 
-	clean_url = this->cleaningURL(url);
+	clean_url = this->cleaningURL((char*) canonicalized_url.getString());
 	// cout << "\tClean URL: " << clean_url.getString() << endl;
 
 	// Check if there is something after "http[s]?://""
@@ -75,6 +79,9 @@ int Url::getURLsize(char* url){
 }
 
 // Remove "http[s]?://" from url
+
+// CkString chop
+
 char* Url::cleaningURL(string url){
 	string http ("http");
 	string delimitation ("://");
@@ -104,15 +111,29 @@ char* Url::cleaningURL(string url){
 	return final_url;
 }
 
+// CkString Url::canonicalizeUrl(string url){
+//Also removes "www."
+string Url::canonicalizeUrl(string url){
+	CkString new_url;
+	CkSpider spider;
+
+	spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
+
+	return ((char*) new_url.getString());
+
+}
+
 
 void Url::setUrl(char* url){
-	this->url = (char*) url;
-	this->size = this->getURLsize((char*) url);
+	this->url = this->canonicalizeUrl(url);
+	// cout << "Url: " << this->url << endl;
+	this->size = this->getURLsize(this->url);
 }
 
 void Url::setUrl(string url){
-	this->url = url;
-	this->size = this->getURLsize((char*) url.c_str());
+	this->url = this->canonicalizeUrl(url);
+	// cout << this->url << endl;
+	this->size = this->getURLsize(this->url);
 	// cout << "\tWord In: " << this->url << endl;
 }
 
@@ -122,13 +143,15 @@ void Url::setUrl(const char* url){
 	// strncpy(this->url, url, len);
 	// this->url[len] = '\0';
 	// this->size = this->getURLsize(url);
-	this->url = url;
-	this->size = this->getURLsize((char*) url);
+	// this->url = url;
+	this->url = this->canonicalizeUrl(url);
+	this->size = this->getURLsize(this->url);
 }
 
 void Url::setUrl(CkString url){
-	this->url = (char*) url.getString();
-	this->size = this->getURLsize((char*) url.getString());
+	// this->url = (char*) url.getString();
+	this->url = this->canonicalizeUrl(url.getString());
+	this->size = this->getURLsize(this->url);
 	// cout << "\tWord In: " << this->url << endl;
 }
 
@@ -155,22 +178,24 @@ int Url::getSize() const {
 }
 
 string Url::getNormalizedUrl(){
-	string url = this->cleaningURL(this->url);
+	string url = this->canonicalizeUrl(this->url);
 	string delimitation ("www.");
 
 	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
 
 	// Test if "www." is within the url
 	if (found!=std::string::npos){
-		// Teste if "www." starts in the beginning of the url
-		if (!found){
-			url = url.erase(0,found+delimitation.size());
+		// Teste if "www." starts in the beginning of the url, or after "http://" or "https://"
+		if ((!found)||(found >= 7 && found <= 8)){
+			url = url.erase(found,found+delimitation.size());
 		}
 	}
 
 	if (url.back() == '/'){
 		url.pop_back();
 	}
+
+	// cout << "Normalized Url: " << this->url << " " << url << endl;
 
 	return url;
 }
