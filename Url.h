@@ -5,9 +5,9 @@
 #include <string>
 #include <cstring>
 #include <queue>
-#include "chilkat/CkSpider.h"
-#include "chilkat/CkString.h"
-#include "chilkat/CkStringArray.h"
+#include "chilkat/include/CkSpider.h"
+#include "chilkat/include/CkString.h"
+#include "chilkat/include/CkStringArray.h"
 
 using namespace std;
 
