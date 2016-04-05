@@ -8,18 +8,20 @@
 
 #define NUM_THREADS 50
 #define FILENAME "htmls/html_files"
-#define LIMITE_FILE_SIZE 3000000
+#define LIMITE_FILE_SIZE 300000000 // 300 MB
 
 using namespace std;
 using namespace std::chrono;
 
 PriorityQueue urls_queue;
 unordered_map<string, int> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
-ofstream logs, html_files;
+ofstream logs, html_files, status_log;
 int index_file = 0;
 CkString buffer;
 
-mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex;
+mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex;
+
+high_resolution_clock::time_point t0;
 
 
 void crawling(int id);
@@ -33,8 +35,15 @@ int main(){
 	vector<thread> ths;
 
 	logs.open("logs/log.txt", std::ofstream::out);
+	logs << "time(ms),size(bytes)" << endl;
+
+	status_log.open("logs/status_log.txt", std::ofstream::out);
 
 	initializing_queue(initial_url);
+
+	status_log << "Queue size: " << urls_queue.getSize() << endl;
+
+	t0 = high_resolution_clock::now();
 
 	for (i = 0; i < NUM_THREADS; i++){
 		ths.push_back(thread(&crawling, i));
@@ -45,6 +54,7 @@ int main(){
     }
 
     logs.close();
+    status_log.close();
 
 	return 0;
 
@@ -53,9 +63,9 @@ int main(){
 }
 
 void crawling(int id){
-	int i, size_unspired;
+	int i, size_unspired, logging;
 	bool success;
-	string logging;
+	// string logging;
 
 	CkSpider spider;
 	CkString ckurl, domain, html;
@@ -63,12 +73,16 @@ void crawling(int id){
 	high_resolution_clock::time_point t1, t2;
 
 	while (urls_queue.getSize()>0){
+	// while (true){
 		Url url;
 
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
 		urls_queue_mutex.lock();
 		url = urls_queue.dequeueURL();
+		status_log_mutex.lock();
+		status_log << "Queue size: " << urls_queue.getSize() << endl;
+		status_log_mutex.unlock();
 		urls_queue_mutex.unlock();
 
 		ckurl = url.getUrl().c_str();
@@ -83,9 +97,11 @@ void crawling(int id){
 
 		if (success) { 
 			// logging += "Evaluating " + url.getUrl() + "\n";
-			logging = url.getUrl();
+			// logging = url.getUrl();
 
 			spider.get_LastHtml(html);
+
+			logging = html.getSizeUtf8();
 
 			buffer_mutex.lock();
 			buffer.appendUtf8("/\\/\\ ");
@@ -100,7 +116,7 @@ void crawling(int id){
 				index_file++;
 				html_files.close();
 			}
-			
+
 			buffer_mutex.unlock();
 
 			size_unspired = spider.get_NumUnspidered();
@@ -147,7 +163,7 @@ void crawling(int id){
 			// if (url.getUrl() != ""){
 				log_mutex.lock();
 				// cout << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
-				logs << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
+				logs << duration << "," << logging << endl;
 				log_mutex.unlock();
 			// }
 		}
@@ -156,21 +172,26 @@ void crawling(int id){
 
 	}
 
-	log_mutex.lock();
-	logs << endl << "\t\tThread " << to_string(i) << " is dead." << endl << endl;
-	log_mutex.unlock();
+	status_log_mutex.lock();
+
+	high_resolution_clock::time_point tf = high_resolution_clock::now();
+
+	auto duration = duration_cast<milliseconds>( tf - t0 ).count();
+
+	status_log << "Thread " << to_string(i) << " is dead after " << duration << " ms of execution." << endl;
+	status_log_mutex.unlock();
 	// f.close();
 }
 
 void initializing_queue(vector<string> v){
-	int i, size_unspired;
+	int i, size_unspired, logging;
 	bool success;
-	string logging;
+	// string logging;
 
 	Url url;
 
 	CkSpider spider;
-	CkString ckurl, domain;
+	CkString ckurl, domain, html;
 
 	for (i = 0; i < v.size(); i++){
 		url.setUrl(v[i]);
@@ -196,7 +217,11 @@ void initializing_queue(vector<string> v){
 
 	if (success) { 
 		// logging += "Evaluating " + url.getUrl() + "\n";
-		logging = url.getUrl();
+		// logging = url.getUrl();
+
+		spider.get_LastHtml(html);
+
+		logging = html.getSizeUtf8();
 
 		size_unspired = spider.get_NumUnspidered();
 		for (i = 0; i < size_unspired; i++){
@@ -241,7 +266,7 @@ void initializing_queue(vector<string> v){
 		auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
 		log_mutex.lock();
-		logs << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
+		logs << duration << "," << logging << endl;
 		log_mutex.unlock();
 	}
 }
