@@ -15,7 +15,7 @@ class Url {
 
 private:
 	string url;
-	int size;
+	char size;
 
 	char* cleaningURL(string url);
 	int getURLsize(string url);

@@ -14,7 +14,7 @@ using namespace std;
 using namespace std::chrono;
 
 PriorityQueue urls_queue;
-unordered_map<string, int> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
+unordered_map<string, bool> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 ofstream logs, html_files, status_log;
 int index_file = 0;
 CkString buffer;
@@ -131,7 +131,7 @@ void crawling(int id){
 					urls_queue.queueURL(url);
 					urls_queue_mutex.unlock();
 					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  1;
+					visited_url[url.getNormalizedUrl()] =  true;
 					// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
 					// cin >> aux;
 				}
@@ -150,7 +150,7 @@ void crawling(int id){
 					urls_queue.queueURL(url);
 					urls_queue_mutex.unlock();
 					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  1;
+					visited_url[url.getNormalizedUrl()] =  true;
 				}
 				visited_url_mutex.unlock();
 			}
@@ -196,7 +196,7 @@ void initializing_queue(vector<string> v){
 	for (i = 0; i < v.size(); i++){
 		url.setUrl(v[i]);
 		urls_queue.queueURL(url);
-		visited_url[url.getNormalizedUrl()] = 1;
+		visited_url[url.getNormalizedUrl()] = true;
 	}
 
 	// Url url;
@@ -235,7 +235,7 @@ void initializing_queue(vector<string> v){
 				urls_queue.queueURL(url);
 				urls_queue_mutex.unlock();
 				// visited_url.emplace(url.getUrl(), 1);
-				visited_url[url.getNormalizedUrl()] =  1;
+				visited_url[url.getNormalizedUrl()] =  true;
 				// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
 				// cin >> aux;
 			}
@@ -254,7 +254,7 @@ void initializing_queue(vector<string> v){
 				urls_queue.queueURL(url);
 				urls_queue_mutex.unlock();
 				// visited_url.emplace(url.getUrl(), 1);
-				visited_url[url.getNormalizedUrl()] =  1;
+				visited_url[url.getNormalizedUrl()] =  true;
 			}
 			visited_url_mutex.unlock();
 		}
