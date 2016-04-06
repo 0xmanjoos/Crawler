@@ -22,3 +22,6 @@ url.o: Url.cpp Url.h chilkat/include/CkSpider.h chilkat/include/CkString.h chilk
 
 clean:
 	rm *.o crawler
+
+dir:
+	mkdir htmls logs
