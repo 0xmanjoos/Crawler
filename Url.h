@@ -1,6 +1,8 @@
 #ifndef URL_H
 #define URL_H
 
+
+#include <iostream>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -45,6 +47,10 @@ public:
 	int getSize();
 	int getSize() const;
 	string getNormalizedUrl();
+
+	string getDomain();
+
+	bool isBrDomain();
 
 };
 

@@ -10,6 +10,8 @@
 #define FILENAME "htmls/html_files"
 #define LIMIT_FILE_SIZE 300000000 // 300 MB
 #define LIMIT_SIZE_URL 6
+#define INITIAL_COLLECT 20
+#define THREAD_QUEUE_SIZE 20
 
 using namespace std;
 using namespace std::chrono;
@@ -32,7 +34,7 @@ int main(){
 	int i;
 	Url url;
 
-	vector<string> initial_url = {"http://www.joelonsoftware.com","http://www.ufmg.br"};
+	vector<string> initial_url = {"http://www.uol.com.br"};
 	vector<thread> ths;
 
 	logs.open("logs/log.csv", std::ofstream::out);
@@ -42,7 +44,8 @@ int main(){
 
 	initializing_queue(initial_url);
 
-	status_log << "Queue size: " << urls_queue.getSize() << endl;
+	status_log << "Initial queue size: " << urls_queue.getSize() << endl;
+	status_log << "Creating threads" << endl;
 
 	t0 = high_resolution_clock::now();
 
@@ -51,11 +54,11 @@ int main(){
 	}
 
 	for (auto& th : ths) {
-        th.join();
-    }
+		th.join();
+	}
 
-    logs.close();
-    status_log.close();
+	logs.close();
+	status_log.close();
 
 	return 0;
 
@@ -64,8 +67,9 @@ int main(){
 }
 
 void crawling(int id){
-	int i, size_unspired, logging;
+	int i, size_unspired, logging, dequeue_size;
 	bool success;
+	vector<Url> local_queue;
 	// string logging;
 
 	CkSpider spider;
@@ -73,8 +77,26 @@ void crawling(int id){
 
 	high_resolution_clock::time_point t1, t2;
 
-	while (urls_queue.getSize()>0){
+	urls_queue_mutex.lock();
+	dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
+	for (i=0; i<dequeue_size; i++){
+		local_queue.push_back(urls_queue.dequeueURL());
+	}
+	urls_queue_mutex.unlock();	
+
+	while (urls_queue.getSize()>0 || local_queue.size() > 0 ){
 	// while (true){
+		if (local_queue.empty()){
+			urls_queue_mutex.lock();
+			dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
+			for (i = 0; i<dequeue_size; i++){
+				local_queue.push_back(urls_queue.dequeueURL());
+			}
+			urls_queue_mutex.unlock();				
+		}
+
+
+
 		Url url;
 
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -176,7 +198,6 @@ void crawling(int id){
 		// logging += "\tElapsed time: " + to_string(duration) + " ms." + "\n";
 
 	}
-
 	status_log_mutex.lock();
 
 	high_resolution_clock::time_point tf = high_resolution_clock::now();
@@ -189,7 +210,7 @@ void crawling(int id){
 }
 
 void initializing_queue(vector<string> v){
-	int i, size_unspired, logging;
+	int i, size_unspired, logging, loop_control;
 	bool success;
 	// string logging;
 
@@ -205,77 +226,86 @@ void initializing_queue(vector<string> v){
 	}
 
 	// Url url;
+	loop_control = 0;
 
-	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	while(loop_control < INITIAL_COLLECT){
+		// cout << i << " " << INITIAL_COLLECT <<   endl;
 
-	url = urls_queue.dequeueURL();
+		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-	ckurl = url.getUrl().c_str();
+		url = urls_queue.dequeueURL();
 
-	spider.GetUrlDomain(ckurl.getString(), domain);
+		ckurl = url.getUrl().c_str();
 
-	spider.Initialize(domain.getString());
+		spider.GetUrlDomain(ckurl.getString(), domain);
 
-	spider.AddUnspidered(ckurl.getString());
+		spider.Initialize(domain.getString());
 
-	success = spider.CrawlNext();
+		spider.AddUnspidered(ckurl.getString());
 
-	if (success) { 
-		// logging += "Evaluating " + url.getUrl() + "\n";
-		// logging = url.getUrl();
+		success = spider.CrawlNext();
 
-		spider.get_LastHtml(html);
+		if (success) { 
+			// logging = url.getUrl();
 
-		logging = html.getSizeUtf8();
+			spider.get_LastHtml(html);
 
-		size_unspired = spider.get_NumUnspidered();
-		for (i = 0; i < size_unspired; i++){
-			spider.GetUnspideredUrl(0, ckurl);
-			url.setUrl(ckurl);
-			spider.SkipUnspidered(0);
-			// f << i << ".\t" << url.getUrl() << endl;
-			if (url.getSize() <= LIMIT_SIZE_URL){
-				visited_url_mutex.lock();
-				if (!visited_url[url.getNormalizedUrl()]){
-					urls_queue_mutex.lock();
-					urls_queue.queueURL(url);
-					urls_queue_mutex.unlock();
-					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  true;
-					// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
-					// cin >> aux;
-				}
-				visited_url_mutex.unlock();
+			logging = html.getSizeUtf8();
+
+			buffer.appendUtf8("/\\/\\ ");
+			buffer.appendUtf8(url.getUrl().c_str());
+			buffer.appendUtf8("\n\n");
+			buffer.appendStr(html);
+
+			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
+				html_files.open(FILENAME+to_string(index_file));
+				html_files << buffer.getString();
+				buffer.clear();
+				index_file++;
+				html_files.close();
 			}
+
+			size_unspired = spider.get_NumUnspidered();
+			for (i = 0; i < size_unspired; i++){
+				spider.GetUnspideredUrl(0, ckurl);
+				url.setUrl(ckurl);
+				spider.SkipUnspidered(0);
+				// f << i << ".\t" << url.getUrl() << endl;
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+					if (!visited_url[url.getNormalizedUrl()]){
+						urls_queue.queueURL(url);
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  true;
+						// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
+						// cin >> aux;
+					}
+				}
+			}
+
+			size_unspired = spider.get_NumOutboundLinks();
+
+			for (i = 0; i < size_unspired; i++){
+				spider.GetOutboundLink(i, ckurl);
+				url.setUrl(ckurl);
+				// f << i << ". " << ckurl.getString() << endl;
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+					if (!visited_url[url.getNormalizedUrl()]){
+						urls_queue.queueURL(url);
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  true;
+					}
+				}
+			}
+
+			spider.ClearOutboundLinks();
+
+			high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+
+			logs << duration << "," << logging << endl;
 		}
 
-		size_unspired = spider.get_NumOutboundLinks();
-
-		for (i = 0; i < size_unspired; i++){
-			spider.GetOutboundLink(i, ckurl);
-			url.setUrl(ckurl);
-			// f << i << ". " << ckurl.getString() << endl;
-			if (url.getSize() <= LIMIT_SIZE_URL){
-				visited_url_mutex.lock();
-				if (!visited_url[url.getNormalizedUrl()]){
-					urls_queue_mutex.lock();
-					urls_queue.queueURL(url);
-					urls_queue_mutex.unlock();
-					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  true;
-				}
-				visited_url_mutex.unlock();
-			}
-		}
-
-		spider.ClearOutboundLinks();
-
-		high_resolution_clock::time_point t2 = high_resolution_clock::now();
-
-		auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
-
-		log_mutex.lock();
-		logs << duration << "," << logging << endl;
-		log_mutex.unlock();
+		loop_control++;
 	}
 }

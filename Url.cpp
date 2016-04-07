@@ -199,3 +199,26 @@ string Url::getNormalizedUrl(){
 
 	return url;
 }
+
+string Url::getDomain(){
+	CkSpider spider;
+	CkString domain;
+
+	spider.GetUrlDomain(this->url.c_str(), domain);
+
+	return domain.getString();
+}
+
+bool Url::isBrDomain(){
+	string domain = this->getDomain();
+	string delimitation (".br");
+
+	if (domain.back() == '/'){
+		domain.pop_back();
+	}
+
+	size_t found = domain.find(delimitation);
+
+	return (found == (domain.size()-delimitation.size()));
+
+}
