@@ -8,8 +8,8 @@
 
 #define NUM_THREADS 20
 #define FILENAME "htmls/html_files"
-#define LIMITE_FILE_SIZE 300000000 // 300 MB
-#define LIMITE_SIZE_URL 6
+#define LIMIT_FILE_SIZE 300000000 // 300 MB
+#define LIMIT_SIZE_URL 6
 
 using namespace std;
 using namespace std::chrono;
@@ -110,7 +110,7 @@ void crawling(int id){
 			buffer.appendUtf8("\n\n");
 			buffer.appendStr(html);
 
-			if (buffer.getSizeUtf8() > LIMITE_FILE_SIZE){
+			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
 				html_files.open(FILENAME+to_string(index_file));
 				html_files << buffer.getString();
 				buffer.clear();
@@ -126,7 +126,7 @@ void crawling(int id){
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
 				// f << i << ".\t" << url.getUrl() << endl;
-				if (url.getSize() <= LIMITE_SIZE_URL){
+				if (url.getSize() <= LIMIT_SIZE_URL){
 					visited_url_mutex.lock();
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue_mutex.lock();
@@ -148,7 +148,7 @@ void crawling(int id){
 				url.setUrl(ckurl);
 				// f << i << ". " << ckurl.getString() << endl;
 				visited_url_mutex.lock();
-				if (url.getSize() <= LIMITE_SIZE_URL){
+				if (url.getSize() <= LIMIT_SIZE_URL){
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue_mutex.lock();
 						urls_queue.queueURL(url);
@@ -234,7 +234,7 @@ void initializing_queue(vector<string> v){
 			url.setUrl(ckurl);
 			spider.SkipUnspidered(0);
 			// f << i << ".\t" << url.getUrl() << endl;
-			if (url.getSize() <= LIMITE_SIZE_URL){
+			if (url.getSize() <= LIMIT_SIZE_URL){
 				visited_url_mutex.lock();
 				if (!visited_url[url.getNormalizedUrl()]){
 					urls_queue_mutex.lock();
@@ -255,7 +255,7 @@ void initializing_queue(vector<string> v){
 			spider.GetOutboundLink(i, ckurl);
 			url.setUrl(ckurl);
 			// f << i << ". " << ckurl.getString() << endl;
-			if (url.getSize() <= LIMITE_SIZE_URL){
+			if (url.getSize() <= LIMIT_SIZE_URL){
 				visited_url_mutex.lock();
 				if (!visited_url[url.getNormalizedUrl()]){
 					urls_queue_mutex.lock();
