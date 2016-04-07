@@ -22,7 +22,7 @@ ofstream logs, html_files, status_log;
 int index_file = 0;
 CkString buffer;
 
-mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex;
+mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex, cout_mutex;
 
 high_resolution_clock::time_point t0;
 
@@ -34,7 +34,8 @@ int main(){
 	int i;
 	Url url;
 
-	vector<string> initial_url = {"http://www.uol.com.br"};
+	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia,"	};
 	vector<thread> ths;
 
 	logs.open("logs/log.csv", std::ofstream::out);
@@ -42,10 +43,13 @@ int main(){
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
 
+	buffer.appendUtf8("|||");
+
 	initializing_queue(initial_url);
 
 	status_log << "Initial queue size: " << urls_queue.getSize() << endl;
 	status_log << "Creating threads" << endl;
+
 
 	t0 = high_resolution_clock::now();
 
@@ -82,6 +86,8 @@ void crawling(int id){
 	for (i=0; i<dequeue_size; i++){
 		local_queue.push_back(urls_queue.dequeueURL());
 	}
+
+
 	status_log_mutex.lock();
 	status_log << "Queue size: " << urls_queue.getSize() << endl;
 	status_log_mutex.unlock();
@@ -92,7 +98,7 @@ void crawling(int id){
 		if (local_queue.empty()){
 			urls_queue_mutex.lock();
 			dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
-			for (i = 0; i<dequeue_size; i++){
+			for (i = 0; i < dequeue_size; i++){
 				local_queue.push_back(urls_queue.dequeueURL());
 			}
 			status_log_mutex.lock();
@@ -130,9 +136,10 @@ void crawling(int id){
 			logging = html.getSizeUtf8();
 
 			buffer_mutex.lock();
-			buffer.appendUtf8("/\\/\\ ");
+			buffer.appendUtf8(" ");
 			buffer.appendUtf8(url.getUrl().c_str());
-			buffer.appendUtf8("\n\n");
+			buffer.appendUtf8(" | ");
+			buffer.appendUtf8(" |||");
 			buffer.appendStr(html);
 
 			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
@@ -146,21 +153,20 @@ void crawling(int id){
 			buffer_mutex.unlock();
 
 			size_unspired = spider.get_NumUnspidered();
+
 			for (i = 0; i < size_unspired; i++){
 				spider.GetUnspideredUrl(0, ckurl);
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
-				// f << i << ".\t" << url.getUrl() << endl;
-				if (url.getSize() <= LIMIT_SIZE_URL){
+
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
 					visited_url_mutex.lock();
 					if (!visited_url[url.getNormalizedUrl()]){
+						visited_url[url.getNormalizedUrl()] =  true;
+						visited_url_mutex.unlock();
 						urls_queue_mutex.lock();
 						urls_queue.queueURL(url);
 						urls_queue_mutex.unlock();
-						// visited_url.emplace(url.getUrl(), 1);
-						visited_url[url.getNormalizedUrl()] =  true;
-						// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
-						// cin >> aux;
 					}
 					visited_url_mutex.unlock();
 				}
@@ -171,36 +177,34 @@ void crawling(int id){
 			for (i = 0; i < size_unspired; i++){
 				spider.GetOutboundLink(i, ckurl);
 				url.setUrl(ckurl);
-				// f << i << ". " << ckurl.getString() << endl;
-				visited_url_mutex.lock();
-				if (url.getSize() <= LIMIT_SIZE_URL){
+
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+					visited_url_mutex.lock();
 					if (!visited_url[url.getNormalizedUrl()]){
+						visited_url[url.getNormalizedUrl()] =  true;
+						visited_url_mutex.unlock();
 						urls_queue_mutex.lock();
 						urls_queue.queueURL(url);
 						urls_queue_mutex.unlock();
-						// visited_url.emplace(url.getUrl(), 1);
-						visited_url[url.getNormalizedUrl()] =  true;
 					}
 					visited_url_mutex.unlock();
 				}
 			}
+
+
 			spider.ClearOutboundLinks();
 
 			high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
 			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
-			// if (url.getUrl() != ""){
-				log_mutex.lock();
-				// cout << "Evaluating " << logging << endl << "\tElapsed time: " << duration << " ms." << endl;
-				logs << duration << "," << logging << endl;
-				log_mutex.unlock();
-			// }
-		}
+			log_mutex.lock();
 			
-		// logging += "\tElapsed time: " + to_string(duration) + " ms." + "\n";
-
+			logs << duration << "," << logging << endl;
+			log_mutex.unlock();
+		}
 	}
+
 	status_log_mutex.lock();
 
 	high_resolution_clock::time_point tf = high_resolution_clock::now();
@@ -209,13 +213,12 @@ void crawling(int id){
 
 	status_log << "Thread " << to_string(i) << " is dead after " << duration << " ms of execution." << endl;
 	status_log_mutex.unlock();
-	// f.close();
+
 }
 
 void initializing_queue(vector<string> v){
 	int i, size_unspired, logging, loop_control;
 	bool success;
-	// string logging;
 
 	Url url;
 
@@ -228,11 +231,10 @@ void initializing_queue(vector<string> v){
 		visited_url[url.getNormalizedUrl()] = true;
 	}
 
-	// Url url;
 	loop_control = 0;
 
 	while(loop_control < INITIAL_COLLECT){
-		// cout << i << " " << INITIAL_COLLECT <<   endl;
+	
 
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
@@ -248,16 +250,17 @@ void initializing_queue(vector<string> v){
 
 		success = spider.CrawlNext();
 
-		if (success) { 
-			// logging = url.getUrl();
+	
 
+		if (success) { 
 			spider.get_LastHtml(html);
 
 			logging = html.getSizeUtf8();
 
-			buffer.appendUtf8("/\\/\\ ");
+			buffer.appendUtf8(" ");
 			buffer.appendUtf8(url.getUrl().c_str());
-			buffer.appendUtf8("\n\n");
+			buffer.appendUtf8(" | ");
+			buffer.appendUtf8(" |||");
 			buffer.appendStr(html);
 
 			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
@@ -273,16 +276,14 @@ void initializing_queue(vector<string> v){
 				spider.GetUnspideredUrl(0, ckurl);
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
-				// f << i << ".\t" << url.getUrl() << endl;
+
 				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue.queueURL(url);
-						// visited_url.emplace(url.getUrl(), 1);
 						visited_url[url.getNormalizedUrl()] =  true;
-						// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
-						// cin >> aux;
 					}
 				}
+
 			}
 
 			size_unspired = spider.get_NumOutboundLinks();
@@ -290,14 +291,14 @@ void initializing_queue(vector<string> v){
 			for (i = 0; i < size_unspired; i++){
 				spider.GetOutboundLink(i, ckurl);
 				url.setUrl(ckurl);
-				// f << i << ". " << ckurl.getString() << endl;
+
 				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue.queueURL(url);
-						// visited_url.emplace(url.getUrl(), 1);
 						visited_url[url.getNormalizedUrl()] =  true;
 					}
 				}
+				
 			}
 
 			spider.ClearOutboundLinks();
