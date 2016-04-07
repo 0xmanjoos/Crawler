@@ -82,7 +82,10 @@ void crawling(int id){
 	for (i=0; i<dequeue_size; i++){
 		local_queue.push_back(urls_queue.dequeueURL());
 	}
-	urls_queue_mutex.unlock();	
+	status_log_mutex.lock();
+	status_log << "Queue size: " << urls_queue.getSize() << endl;
+	status_log_mutex.unlock();
+	urls_queue_mutex.unlock();
 
 	while (urls_queue.getSize()>0 || local_queue.size() > 0 ){
 	// while (true){
@@ -92,21 +95,21 @@ void crawling(int id){
 			for (i = 0; i<dequeue_size; i++){
 				local_queue.push_back(urls_queue.dequeueURL());
 			}
-			urls_queue_mutex.unlock();				
+			status_log_mutex.lock();
+			status_log << "Queue size: " << urls_queue.getSize() << endl;
+			status_log_mutex.unlock();
+			urls_queue_mutex.unlock();
 		}
-
-
 
 		Url url;
 
 		high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-		urls_queue_mutex.lock();
-		url = urls_queue.dequeueURL();
-		status_log_mutex.lock();
-		status_log << "Queue size: " << urls_queue.getSize() << endl;
-		status_log_mutex.unlock();
-		urls_queue_mutex.unlock();
+		// urls_queue_mutex.lock();
+		// url = urls_queue.dequeueURL();
+		url = local_queue[0];
+		local_queue.erase(local_queue.begin());
+		// urls_queue_mutex.unlock();
 
 		ckurl = url.getUrl().c_str();
 
