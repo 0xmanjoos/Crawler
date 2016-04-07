@@ -6,9 +6,10 @@
 #include <mutex> // C++11 mutex
 #include "PriorityQueue.h"
 
-#define NUM_THREADS 50
+#define NUM_THREADS 20
 #define FILENAME "htmls/html_files"
 #define LIMITE_FILE_SIZE 300000000 // 300 MB
+#define LIMITE_SIZE_URL 6
 
 using namespace std;
 using namespace std::chrono;
@@ -125,17 +126,19 @@ void crawling(int id){
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
 				// f << i << ".\t" << url.getUrl() << endl;
-				visited_url_mutex.lock();
-				if (!visited_url[url.getNormalizedUrl()]){
-					urls_queue_mutex.lock();
-					urls_queue.queueURL(url);
-					urls_queue_mutex.unlock();
-					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  true;
-					// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
-					// cin >> aux;
+				if (url.getSize() <= LIMITE_SIZE_URL){
+					visited_url_mutex.lock();
+					if (!visited_url[url.getNormalizedUrl()]){
+						urls_queue_mutex.lock();
+						urls_queue.queueURL(url);
+						urls_queue_mutex.unlock();
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  true;
+						// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
+						// cin >> aux;
+					}
+					visited_url_mutex.unlock();
 				}
-				visited_url_mutex.unlock();
 			}
 
 			size_unspired = spider.get_NumOutboundLinks();
@@ -145,14 +148,16 @@ void crawling(int id){
 				url.setUrl(ckurl);
 				// f << i << ". " << ckurl.getString() << endl;
 				visited_url_mutex.lock();
-				if (!visited_url[url.getNormalizedUrl()]){
-					urls_queue_mutex.lock();
-					urls_queue.queueURL(url);
-					urls_queue_mutex.unlock();
-					// visited_url.emplace(url.getUrl(), 1);
-					visited_url[url.getNormalizedUrl()] =  true;
+				if (url.getSize() <= LIMITE_SIZE_URL){
+					if (!visited_url[url.getNormalizedUrl()]){
+						urls_queue_mutex.lock();
+						urls_queue.queueURL(url);
+						urls_queue_mutex.unlock();
+						// visited_url.emplace(url.getUrl(), 1);
+						visited_url[url.getNormalizedUrl()] =  true;
+					}
+					visited_url_mutex.unlock();
 				}
-				visited_url_mutex.unlock();
 			}
 			spider.ClearOutboundLinks();
 
@@ -229,17 +234,19 @@ void initializing_queue(vector<string> v){
 			url.setUrl(ckurl);
 			spider.SkipUnspidered(0);
 			// f << i << ".\t" << url.getUrl() << endl;
-			visited_url_mutex.lock();
-			if (!visited_url[url.getNormalizedUrl()]){
-				urls_queue_mutex.lock();
-				urls_queue.queueURL(url);
-				urls_queue_mutex.unlock();
-				// visited_url.emplace(url.getUrl(), 1);
-				visited_url[url.getNormalizedUrl()] =  true;
-				// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
-				// cin >> aux;
+			if (url.getSize() <= LIMITE_SIZE_URL){
+				visited_url_mutex.lock();
+				if (!visited_url[url.getNormalizedUrl()]){
+					urls_queue_mutex.lock();
+					urls_queue.queueURL(url);
+					urls_queue_mutex.unlock();
+					// visited_url.emplace(url.getUrl(), 1);
+					visited_url[url.getNormalizedUrl()] =  true;
+					// f << "Value: " << (int) visited_url[url.getUrl()] << endl;
+					// cin >> aux;
+				}
+				visited_url_mutex.unlock();
 			}
-			visited_url_mutex.unlock();
 		}
 
 		size_unspired = spider.get_NumOutboundLinks();
@@ -248,15 +255,17 @@ void initializing_queue(vector<string> v){
 			spider.GetOutboundLink(i, ckurl);
 			url.setUrl(ckurl);
 			// f << i << ". " << ckurl.getString() << endl;
-			visited_url_mutex.lock();
-			if (!visited_url[url.getNormalizedUrl()]){
-				urls_queue_mutex.lock();
-				urls_queue.queueURL(url);
-				urls_queue_mutex.unlock();
-				// visited_url.emplace(url.getUrl(), 1);
-				visited_url[url.getNormalizedUrl()] =  true;
+			if (url.getSize() <= LIMITE_SIZE_URL){
+				visited_url_mutex.lock();
+				if (!visited_url[url.getNormalizedUrl()]){
+					urls_queue_mutex.lock();
+					urls_queue.queueURL(url);
+					urls_queue_mutex.unlock();
+					// visited_url.emplace(url.getUrl(), 1);
+					visited_url[url.getNormalizedUrl()] =  true;
+				}
+				visited_url_mutex.unlock();
 			}
-			visited_url_mutex.unlock();
 		}
 
 		spider.ClearOutboundLinks();
