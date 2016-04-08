@@ -6,7 +6,7 @@
 #include <mutex> // C++11 mutex
 #include "PriorityQueue.h"
 
-#define NUM_THREADS 20
+#define NUM_THREADS 1
 #define FILENAME "htmls/html_files"
 #define LIMIT_FILE_SIZE 300000000 // 300 MB
 #define LIMIT_SIZE_URL 6
@@ -82,28 +82,50 @@ void crawling(int id){
 	high_resolution_clock::time_point t1, t2;
 
 	urls_queue_mutex.lock();
+	// cout_mutex.lock();
+	// cout << "urls_queue" << " mutex locked" << endl;
+	// cout_mutex.unlock();
 	dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
 	for (i=0; i<dequeue_size; i++){
 		local_queue.push_back(urls_queue.dequeueURL());
 	}
-
-
 	status_log_mutex.lock();
+	// cout_mutex.lock();
+	// cout << "status_log" << " mutex locked" << endl;
+	// cout_mutex.unlock();
 	status_log << "Queue size: " << urls_queue.getSize() << endl;
 	status_log_mutex.unlock();
+	// cout_mutex.lock();
+	// cout << "status_log" << " mutex unlocked" << endl;
+	// cout_mutex.unlock();
+	// cout_mutex.lock();
+	// cout << "urls_queue" << " mutex unlocked" << endl;
+	// cout_mutex.unlock();
 	urls_queue_mutex.unlock();
 
 	while (urls_queue.getSize()>0 || local_queue.size() > 0 ){
 	// while (true){
 		if (local_queue.empty()){
 			urls_queue_mutex.lock();
+			// cout_mutex.lock();
+			// cout << "urls_queue" << " mutex locked" << endl;
+			// cout_mutex.unlock();
 			dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
 			for (i = 0; i < dequeue_size; i++){
 				local_queue.push_back(urls_queue.dequeueURL());
 			}
 			status_log_mutex.lock();
+			// cout_mutex.lock();
+			// cout << "status_log" << " mutex locked" << endl;
+			// cout_mutex.unlock();
 			status_log << "Queue size: " << urls_queue.getSize() << endl;
+			// cout_mutex.lock();
+			// cout << "status_log" << " mutex unlocked" << endl;
+			// cout_mutex.unlock();
 			status_log_mutex.unlock();
+			// cout_mutex.lock();
+			// cout << "urls_queue" << " mutex unlocked" << endl;
+			// cout_mutex.unlock();
 			urls_queue_mutex.unlock();
 		}
 
@@ -136,6 +158,9 @@ void crawling(int id){
 			logging = html.getSizeUtf8();
 
 			buffer_mutex.lock();
+			// cout_mutex.lock();
+			// cout << "buffer" << " mutex locked" << endl;
+			// cout_mutex.unlock();
 			buffer.appendUtf8(" ");
 			buffer.appendUtf8(url.getUrl().c_str());
 			buffer.appendUtf8(" | ");
@@ -150,6 +175,10 @@ void crawling(int id){
 				html_files.close();
 			}
 
+			// cout_mutex.lock();
+			// cout << "buffer" << " mutex unlocked" << endl;
+			// cout_mutex.unlock();
+
 			buffer_mutex.unlock();
 
 			size_unspired = spider.get_NumUnspidered();
@@ -161,14 +190,25 @@ void crawling(int id){
 
 				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
 					visited_url_mutex.lock();
+					// cout_mutex.lock();
+					// cout << "visited_url" << " mutex locked" << endl;
+					// cout_mutex.unlock();
 					if (!visited_url[url.getNormalizedUrl()]){
-						visited_url[url.getNormalizedUrl()] =  true;
 						urls_queue_mutex.lock();
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex locked" << endl;
+						// cout_mutex.unlock();
 						urls_queue.queueURL(url);
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex unlocked" << endl;
+						// cout_mutex.unlock();
 						urls_queue_mutex.unlock();
-					} else {
-						visited_url_mutex.unlock();
-					}
+						visited_url[url.getNormalizedUrl()] =  true;
+					} 
+					// cout_mutex.lock();
+					// cout << "visited_url" << " mutex unlocked" << endl;
+					// cout_mutex.unlock();
+					visited_url_mutex.unlock();
 				}
 			}
 
@@ -180,15 +220,26 @@ void crawling(int id){
 
 				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
 					visited_url_mutex.lock();
+					// cout_mutex.lock();
+					// cout << "visited_url" << " mutex locked" << endl;
+					// cout_mutex.unlock();
 					if (!visited_url[url.getNormalizedUrl()]){
-						visited_url[url.getNormalizedUrl()] =  true;
 						visited_url_mutex.unlock();
 						urls_queue_mutex.lock();
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex locked" << endl;
+						// cout_mutex.unlock();
 						urls_queue.queueURL(url);
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex unlocked" << endl;
+						// cout_mutex.unlock();
 						urls_queue_mutex.unlock();
-					} else {
-						visited_url_mutex.unlock();
-					}
+						visited_url[url.getNormalizedUrl()] =  true;
+					} 
+					// cout_mutex.lock();
+					// cout << "visited_url" << " mutex unlocked" << endl;
+					// cout_mutex.unlock();
+					visited_url_mutex.unlock();
 				}
 			}
 
@@ -200,19 +251,32 @@ void crawling(int id){
 			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
 			log_mutex.lock();
+			// cout_mutex.lock();
+			// cout << "log" << " mutex locked" << endl;
+			// cout_mutex.unlock();
 			
 			logs << duration << "," << logging << endl;
+
+			// cout_mutex.lock();
+			// cout << "log" << " mutex unlocked" << endl;
+			// cout_mutex.unlock();
 			log_mutex.unlock();
 		}
 	}
 
 	status_log_mutex.lock();
+	// cout_mutex.lock();
+	// cout << "status_log" << " mutex locked" << endl;
+	// cout_mutex.unlock();
 
 	high_resolution_clock::time_point tf = high_resolution_clock::now();
 
 	auto duration = duration_cast<milliseconds>( tf - t0 ).count();
 
 	status_log << "Thread " << to_string(i) << " is dead after " << duration << " ms of execution." << endl;
+	// cout_mutex.lock();
+	// cout << "status_log" << " mutex unlocked" << endl;
+	// cout_mutex.unlock();
 	status_log_mutex.unlock();
 
 }
