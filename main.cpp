@@ -6,7 +6,7 @@
 #include <mutex> // C++11 mutex
 #include "PriorityQueue.h"
 
-#define NUM_THREADS 1
+#define NUM_THREADS 20
 #define FILENAME "htmls/html_files"
 #define LIMIT_FILE_SIZE 300000000 // 300 MB
 #define LIMIT_SIZE_URL 6
@@ -188,7 +188,7 @@ void crawling(int id){
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
 
-				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+				if (url.getSize() <= LIMIT_SIZE_URL && url.getSize() > 0){
 					visited_url_mutex.lock();
 					// cout_mutex.lock();
 					// cout << "visited_url" << " mutex locked" << endl;
@@ -218,13 +218,12 @@ void crawling(int id){
 				spider.GetOutboundLink(i, ckurl);
 				url.setUrl(ckurl);
 
-				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain() && url.getSize() > 0){
 					visited_url_mutex.lock();
 					// cout_mutex.lock();
 					// cout << "visited_url" << " mutex locked" << endl;
 					// cout_mutex.unlock();
 					if (!visited_url[url.getNormalizedUrl()]){
-						visited_url_mutex.unlock();
 						urls_queue_mutex.lock();
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex locked" << endl;
@@ -342,7 +341,7 @@ void initializing_queue(vector<string> v){
 				url.setUrl(ckurl);
 				spider.SkipUnspidered(0);
 
-				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+				if (url.getSize() <= LIMIT_SIZE_URL && url.getSize() > 0){
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue.queueURL(url);
 						visited_url[url.getNormalizedUrl()] =  true;
@@ -357,7 +356,7 @@ void initializing_queue(vector<string> v){
 				spider.GetOutboundLink(i, ckurl);
 				url.setUrl(ckurl);
 
-				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain()){
+				if (url.getSize() <= LIMIT_SIZE_URL && url.isBrDomain() && url.getSize() > 0){
 					if (!visited_url[url.getNormalizedUrl()]){
 						urls_queue.queueURL(url);
 						visited_url[url.getNormalizedUrl()] =  true;
