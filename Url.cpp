@@ -195,8 +195,6 @@ string Url::getNormalizedUrl(){
 		url.pop_back();
 	}
 
-	// cout << "Normalized Url: " << this->url << " " << url << endl;
-
 	return url;
 }
 

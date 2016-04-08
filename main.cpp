@@ -163,12 +163,12 @@ void crawling(int id){
 					visited_url_mutex.lock();
 					if (!visited_url[url.getNormalizedUrl()]){
 						visited_url[url.getNormalizedUrl()] =  true;
-						visited_url_mutex.unlock();
 						urls_queue_mutex.lock();
 						urls_queue.queueURL(url);
 						urls_queue_mutex.unlock();
+					} else {
+						visited_url_mutex.unlock();
 					}
-					visited_url_mutex.unlock();
 				}
 			}
 
@@ -186,8 +186,9 @@ void crawling(int id){
 						urls_queue_mutex.lock();
 						urls_queue.queueURL(url);
 						urls_queue_mutex.unlock();
+					} else {
+						visited_url_mutex.unlock();
 					}
-					visited_url_mutex.unlock();
 				}
 			}
 
@@ -298,7 +299,7 @@ void initializing_queue(vector<string> v){
 						visited_url[url.getNormalizedUrl()] =  true;
 					}
 				}
-				
+
 			}
 
 			spider.ClearOutboundLinks();
