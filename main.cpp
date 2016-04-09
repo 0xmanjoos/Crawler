@@ -12,7 +12,7 @@
 #define LIMIT_SIZE_URL 6
 #define INITIAL_COLLECT 20
 #define THREAD_QUEUE_SIZE 20
-#define LIMIT_MEM_LOG 500
+#define LIMIT_MEM_LOG 1000
 #define SIZE_LOCAL_QUEUE 100
 
 using namespace std;
@@ -22,7 +22,7 @@ PriorityQueue urls_queue;
 unordered_map<string, bool> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 ofstream logs, html_files, status_log;
 int index_file = 0, log_entrance = 0;
-CkString buffer, log_buffer;
+string buffer, log_buffer;
 
 mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex, cout_mutex;
 
@@ -37,7 +37,7 @@ int main(){
 	Url url;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia,"	};
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia"	};
 	vector<thread> ths;
 
 	logs.open("logs/log.csv", std::ofstream::out);
@@ -45,7 +45,7 @@ int main(){
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
 
-	buffer.appendUtf8("|||");
+	buffer.append("|||");
 
 	initializing_queue(initial_url);
 
@@ -74,6 +74,7 @@ int main(){
 
 void crawling(int id){
 	int i, size_unspired, logging, dequeue_size, vector_size;
+	double duration;
 	bool success;
 	vector<Url> local_queue, local_to_queue;
 	// string logging;
@@ -81,61 +82,41 @@ void crawling(int id){
 	CkSpider spider;
 	CkString ckurl, domain, html;
 
-	high_resolution_clock::time_point t1, t2;
+	high_resolution_clock::time_point t1, t2, tf;
 
+	// Initializing local queue
 	urls_queue_mutex.lock();
-	// cout_mutex.lock();
-	// cout << "urls_queue" << " mutex locked" << endl;
-	// cout_mutex.unlock();
 	dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
 	for (i=0; i<dequeue_size; i++){
 		local_queue.push_back(urls_queue.dequeueURL());
 	}
-	// cout_mutex.lock();
-	// cout << "urls_queue" << " mutex unlocked" << endl;
-	// cout_mutex.unlock();
 	urls_queue_mutex.unlock();
 
+	// Updating status log
 	status_log_mutex.lock();
-	// cout_mutex.lock();
-	// cout << "status_log" << " mutex locked" << endl;
-	// cout_mutex.unlock();
 	status_log << "Queue size: " << urls_queue.getSize() << endl;
-	// cout_mutex.lock();
-	// cout << "status_log" << " mutex unlocked" << endl;
-	// cout_mutex.unlock();
 	status_log_mutex.unlock();
 
 	while (urls_queue.getSize()>0 || local_queue.size() > 0 ){
-	// while (true){
+
+		// Checking if local queue is empty
 		if (local_queue.empty()){
 			urls_queue_mutex.lock();
-			// cout_mutex.lock();
-			// cout << "urls_queue" << " mutex locked" << endl;
-			// cout_mutex.unlock();
 			dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
 			for (i = 0; i < dequeue_size; i++){
 				local_queue.push_back(urls_queue.dequeueURL());
 			}
-			// cout_mutex.lock();
-			// cout << "urls_queue" << " mutex unlocked" << endl;
-			// cout_mutex.unlock();
 			urls_queue_mutex.unlock();
 
+			// Updating status log
 			status_log_mutex.lock();
-			// cout_mutex.lock();
-			// cout << "status_log" << " mutex locked" << endl;
-			// cout_mutex.unlock();
 			status_log << "Queue size: " << urls_queue.getSize() << endl;
-			// cout_mutex.lock();
-			// cout << "status_log" << " mutex unlocked" << endl;
-			// cout_mutex.unlock();
 			status_log_mutex.unlock();
 		}
 
 		Url url;
 
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+		t1 = high_resolution_clock::now();
 
 		// urls_queue_mutex.lock();
 		// url = urls_queue.dequeueURL();
@@ -169,14 +150,14 @@ void crawling(int id){
 			buffer.append(url.getUrl().c_str());
 			buffer.append(" | ");
 			buffer.append(" |||");
-			buffer.appendStr(html);
+			buffer.append(html.getString());
 
-			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
+			if (buffer.size() > LIMIT_FILE_SIZE){
 				html_files.open(FILENAME+to_string(index_file));
-				html_files << buffer.getString();
+				html_files << buffer;
+				html_files.close();
 				buffer.clear();
 				index_file++;
-				html_files.close();
 			}
 
 			// cout_mutex.lock();
@@ -249,9 +230,9 @@ void crawling(int id){
 
 			spider.ClearOutboundLinks();
 
-			high_resolution_clock::time_point t2 = high_resolution_clock::now();
+			t2 = high_resolution_clock::now();
 
-			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+			duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
 			log_mutex.lock();
 			// cout_mutex.lock();
@@ -260,15 +241,15 @@ void crawling(int id){
 			
 			// logs << duration << "," << logging << endl;
 
-			log_buffer.appendInt(duration);
+			log_buffer.append(to_string(duration));
 			log_buffer.append(",");
-			log_buffer.appendInt(logging);
+			log_buffer.append(to_string(logging));
 			log_buffer.append("\n");
 
 			log_entrance++;
 
 			if (log_entrance >= LIMIT_MEM_LOG){
-				logs << log_buffer.getString();
+				logs << log_buffer;
 				log_buffer.clear();
 
 			}
@@ -285,11 +266,11 @@ void crawling(int id){
 	// cout << "status_log" << " mutex locked" << endl;
 	// cout_mutex.unlock();
 
-	high_resolution_clock::time_point tf = high_resolution_clock::now();
+	tf = high_resolution_clock::now();
 
-	auto duration = duration_cast<milliseconds>( tf - t0 ).count();
+	duration = duration_cast<milliseconds>( tf - t0 ).count();
 
-	status_log << "Thread " << to_string(i) << " is dead after " << duration << " ms of execution." << endl;
+	status_log << "Thread " << i << " is dead after " << duration << " ms of execution." << endl;
 	// cout_mutex.lock();
 	// cout << "status_log" << " mutex unlocked" << endl;
 	// cout_mutex.unlock();
@@ -299,12 +280,15 @@ void crawling(int id){
 
 void initializing_queue(vector<string> v){
 	int i, size_unspired, logging, loop_control;
+	double duration;
 	bool success;
 
 	Url url;
 
 	CkSpider spider;
 	CkString ckurl, domain, html;
+
+	high_resolution_clock::time_point t1, t2;
 
 	for (i = 0; i < v.size(); i++){
 		url.setUrl(v[i]);
@@ -317,7 +301,7 @@ void initializing_queue(vector<string> v){
 	while(loop_control < INITIAL_COLLECT){
 	
 
-		high_resolution_clock::time_point t1 = high_resolution_clock::now();
+		t1 = high_resolution_clock::now();
 
 		url = urls_queue.dequeueURL();
 
@@ -338,18 +322,18 @@ void initializing_queue(vector<string> v){
 
 			logging = html.getSizeUtf8();
 
-			buffer.appendUtf8(" ");
-			buffer.appendUtf8(url.getUrl().c_str());
-			buffer.appendUtf8(" | ");
-			buffer.appendUtf8(" |||");
-			buffer.appendStr(html);
+			buffer.append(" ");
+			buffer.append(url.getUrl());
+			buffer.append(" | ");
+			buffer.append(" |||");
+			buffer.append(html.getString());
 
-			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
+			if (buffer.size() > LIMIT_FILE_SIZE){
 				html_files.open(FILENAME+to_string(index_file));
-				html_files << buffer.getString();
+				html_files << buffer;
+				html_files.close();
 				buffer.clear();
 				index_file++;
-				html_files.close();
 			}
 
 			size_unspired = spider.get_NumUnspidered();
@@ -384,9 +368,9 @@ void initializing_queue(vector<string> v){
 
 			spider.ClearOutboundLinks();
 
-			high_resolution_clock::time_point t2 = high_resolution_clock::now();
+			t2 = high_resolution_clock::now();
 
-			auto duration = duration_cast<milliseconds>( t2 - t1 ).count();
+			duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
 			logs << duration << "," << logging << endl;
 		}
