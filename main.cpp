@@ -41,19 +41,18 @@ int main(){
 	vector<thread> ths;
 
 	logs.open("logs/log.csv", std::ofstream::out);
-	logs << "time(ms),size(bytes)" << endl;
+	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
 
 	buffer.append("|||");
 
+	t0 = high_resolution_clock::now();
+
 	initializing_queue(initial_url);
 
 	status_log << "Initial queue size: " << urls_queue.getSize() << endl;
 	status_log << "Creating threads" << endl;
-
-
-	t0 = high_resolution_clock::now();
 
 	for (i = 0; i < NUM_THREADS; i++){
 		ths.push_back(thread(&crawling, i));
@@ -74,7 +73,7 @@ int main(){
 
 void crawling(int id){
 	int i, size_unspired, logging, dequeue_size, vector_size;
-	double duration;
+	double duration, total_duration;
 	bool success;
 	vector<Url> local_queue, local_to_queue;
 	// string logging;
@@ -233,6 +232,7 @@ void crawling(int id){
 			t2 = high_resolution_clock::now();
 
 			duration = duration_cast<milliseconds>( t2 - t1 ).count();
+			total_duration = duration_cast<seconds>( t2 - t0 ).count();
 
 			log_mutex.lock();
 			// cout_mutex.lock();
@@ -241,6 +241,8 @@ void crawling(int id){
 			
 			// logs << duration << "," << logging << endl;
 
+			log_buffer.append(to_string(total_duration));
+			log_buffer.append(",");
 			log_buffer.append(to_string(duration));
 			log_buffer.append(",");
 			log_buffer.append(to_string(logging));
@@ -280,7 +282,7 @@ void crawling(int id){
 
 void initializing_queue(vector<string> v){
 	int i, size_unspired, logging, loop_control;
-	double duration;
+	double duration, total_duration;
 	bool success;
 
 	Url url;
@@ -372,7 +374,9 @@ void initializing_queue(vector<string> v){
 
 			duration = duration_cast<milliseconds>( t2 - t1 ).count();
 
-			logs << duration << "," << logging << endl;
+			total_duration = duration_cast<seconds>( t2 - t0 ).count();
+
+			logs << total_duration << "," << duration << "," << logging << endl;
 		}
 
 		loop_control++;
