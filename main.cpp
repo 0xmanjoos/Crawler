@@ -6,12 +6,14 @@
 #include <mutex> // C++11 mutex
 #include "PriorityQueue.h"
 
-#define NUM_THREADS 20
+#define NUM_THREADS 30
 #define FILENAME "htmls/html_files"
 #define LIMIT_FILE_SIZE 300000000 // 300 MB
 #define LIMIT_SIZE_URL 6
 #define INITIAL_COLLECT 20
 #define THREAD_QUEUE_SIZE 20
+#define LIMIT_MEM_LOG 500
+#define SIZE_LOCAL_QUEUE 100
 
 using namespace std;
 using namespace std::chrono;
@@ -19,8 +21,8 @@ using namespace std::chrono;
 PriorityQueue urls_queue;
 unordered_map<string, bool> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 ofstream logs, html_files, status_log;
-int index_file = 0;
-CkString buffer;
+int index_file = 0, log_entrance = 0;
+CkString buffer, log_buffer;
 
 mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex, cout_mutex;
 
@@ -71,9 +73,9 @@ int main(){
 }
 
 void crawling(int id){
-	int i, size_unspired, logging, dequeue_size;
+	int i, size_unspired, logging, dequeue_size, vector_size;
 	bool success;
-	vector<Url> local_queue;
+	vector<Url> local_queue, local_to_queue;
 	// string logging;
 
 	CkSpider spider;
@@ -89,19 +91,20 @@ void crawling(int id){
 	for (i=0; i<dequeue_size; i++){
 		local_queue.push_back(urls_queue.dequeueURL());
 	}
+	// cout_mutex.lock();
+	// cout << "urls_queue" << " mutex unlocked" << endl;
+	// cout_mutex.unlock();
+	urls_queue_mutex.unlock();
+
 	status_log_mutex.lock();
 	// cout_mutex.lock();
 	// cout << "status_log" << " mutex locked" << endl;
 	// cout_mutex.unlock();
 	status_log << "Queue size: " << urls_queue.getSize() << endl;
-	status_log_mutex.unlock();
 	// cout_mutex.lock();
 	// cout << "status_log" << " mutex unlocked" << endl;
 	// cout_mutex.unlock();
-	// cout_mutex.lock();
-	// cout << "urls_queue" << " mutex unlocked" << endl;
-	// cout_mutex.unlock();
-	urls_queue_mutex.unlock();
+	status_log_mutex.unlock();
 
 	while (urls_queue.getSize()>0 || local_queue.size() > 0 ){
 	// while (true){
@@ -114,6 +117,11 @@ void crawling(int id){
 			for (i = 0; i < dequeue_size; i++){
 				local_queue.push_back(urls_queue.dequeueURL());
 			}
+			// cout_mutex.lock();
+			// cout << "urls_queue" << " mutex unlocked" << endl;
+			// cout_mutex.unlock();
+			urls_queue_mutex.unlock();
+
 			status_log_mutex.lock();
 			// cout_mutex.lock();
 			// cout << "status_log" << " mutex locked" << endl;
@@ -123,10 +131,6 @@ void crawling(int id){
 			// cout << "status_log" << " mutex unlocked" << endl;
 			// cout_mutex.unlock();
 			status_log_mutex.unlock();
-			// cout_mutex.lock();
-			// cout << "urls_queue" << " mutex unlocked" << endl;
-			// cout_mutex.unlock();
-			urls_queue_mutex.unlock();
 		}
 
 		Url url;
@@ -161,10 +165,10 @@ void crawling(int id){
 			// cout_mutex.lock();
 			// cout << "buffer" << " mutex locked" << endl;
 			// cout_mutex.unlock();
-			buffer.appendUtf8(" ");
-			buffer.appendUtf8(url.getUrl().c_str());
-			buffer.appendUtf8(" | ");
-			buffer.appendUtf8(" |||");
+			buffer.append(" ");
+			buffer.append(url.getUrl().c_str());
+			buffer.append(" | ");
+			buffer.append(" |||");
 			buffer.appendStr(html);
 
 			if (buffer.getSizeUtf8() > LIMIT_FILE_SIZE){
@@ -194,15 +198,7 @@ void crawling(int id){
 					// cout << "visited_url" << " mutex locked" << endl;
 					// cout_mutex.unlock();
 					if (!visited_url[url.getNormalizedUrl()]){
-						urls_queue_mutex.lock();
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex locked" << endl;
-						// cout_mutex.unlock();
-						urls_queue.queueURL(url);
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex unlocked" << endl;
-						// cout_mutex.unlock();
-						urls_queue_mutex.unlock();
+						local_to_queue.push_back(url);
 						visited_url[url.getNormalizedUrl()] =  true;
 					} 
 					// cout_mutex.lock();
@@ -224,22 +220,30 @@ void crawling(int id){
 					// cout << "visited_url" << " mutex locked" << endl;
 					// cout_mutex.unlock();
 					if (!visited_url[url.getNormalizedUrl()]){
-						urls_queue_mutex.lock();
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex locked" << endl;
-						// cout_mutex.unlock();
-						urls_queue.queueURL(url);
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex unlocked" << endl;
-						// cout_mutex.unlock();
-						urls_queue_mutex.unlock();
+						local_to_queue.push_back(url);
 						visited_url[url.getNormalizedUrl()] =  true;
-					} 
+					}
 					// cout_mutex.lock();
 					// cout << "visited_url" << " mutex unlocked" << endl;
 					// cout_mutex.unlock();
 					visited_url_mutex.unlock();
 				}
+			}
+
+			if(local_to_queue.size() >= SIZE_LOCAL_QUEUE){
+				urls_queue_mutex.lock();
+				// cout_mutex.lock();
+				// cout << "urls_queue" << " mutex locked" << endl;
+				// cout_mutex.unlock();
+				vector_size = local_to_queue.size();
+				for (i = 0; i < vector_size; i++){
+					urls_queue.queueURL(local_to_queue.back());
+					local_to_queue.pop_back();
+				}
+				// cout_mutex.lock();
+				// cout << "urls_queue" << " mutex unlocked" << endl;
+				// cout_mutex.unlock();
+				urls_queue_mutex.unlock();
 			}
 
 
@@ -254,7 +258,20 @@ void crawling(int id){
 			// cout << "log" << " mutex locked" << endl;
 			// cout_mutex.unlock();
 			
-			logs << duration << "," << logging << endl;
+			// logs << duration << "," << logging << endl;
+
+			log_buffer.appendInt(duration);
+			log_buffer.append(",");
+			log_buffer.appendInt(logging);
+			log_buffer.append("\n");
+
+			log_entrance++;
+
+			if (log_entrance >= LIMIT_MEM_LOG){
+				logs << log_buffer.getString();
+				log_buffer.clear();
+
+			}
 
 			// cout_mutex.lock();
 			// cout << "log" << " mutex unlocked" << endl;
