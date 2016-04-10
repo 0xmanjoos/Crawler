@@ -6,3 +6,4 @@ crawler
 TODO
 logs/*
 htmls/*
+*.out
