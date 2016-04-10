@@ -450,6 +450,8 @@ void backingup_queue(int id){
 			}
 			urls_queue_mutex.unlock();
 
+			backup_queue << output;
+
 			status_log_mutex.lock();
 			t2 = high_resolution_clock::now();
 
