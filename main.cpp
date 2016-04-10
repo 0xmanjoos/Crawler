@@ -6,12 +6,12 @@
 #include <mutex> // C++11 mutex
 #include "PriorityQueue.h"
 
-#define NUM_THREADS 30
+#define NUM_THREADS 50
 #define FILENAME "htmls/html_files"
 #define LIMIT_FILE_SIZE 300000000 // 300 MB
 #define LIMIT_SIZE_URL 6
 #define INITIAL_COLLECT 20
-#define THREAD_QUEUE_SIZE 20
+#define THREAD_QUEUE_SIZE 30
 #define LIMIT_MEM_LOG 1000
 #define SIZE_LOCAL_QUEUE 100
 
