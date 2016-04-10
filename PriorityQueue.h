@@ -6,8 +6,8 @@
 using namespace std;
 
 struct CompareURL {
-	bool operator()(const Url& url1, const Url& url2) {
-		return url1.getSize() > url2.getSize();
+	bool operator()(const string& url1, const string& url2) {
+		return getURLsize(url1) > getURLsize(url2);
 	}
 };
 
@@ -15,7 +15,7 @@ class PriorityQueue {
 
 private:
 
-	priority_queue<Url, std::vector<Url>, CompareURL> list;
+	priority_queue<string, std::vector<string>, CompareURL> list;
 	int size;
 	
 public:
@@ -26,10 +26,10 @@ public:
 	~PriorityQueue();
 
 	// Setters
-	void queueURL(Url url);
+	void queueURL(string url);
 
 	// Getters
-	Url dequeueURL();
+	string dequeueURL();
 	int getSize();
 
 };

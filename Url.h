@@ -13,45 +13,12 @@
 
 using namespace std;
 
-class Url {
 
-private:
-	string url;
-	char size;
-
-	char* cleaningURL(string url);
-	int getURLsize(string url);
-	string canonicalizeUrl(string url);
-	
-public:
-	// Constructors
-	Url();
-	Url(char* url);
-	Url(string url);
-	Url(CkString url);
-	Url(Url const& url);
-
-	// Destructor
-	~Url();
-
-	// Setters
-	void setUrl(char* url);
-	void setUrl(string url);
-	void setUrl(const char* url);
-	void setUrl(CkString url);
-
-	// Getters
-	string getUrl();
-	string getUrl() const;
-	string getCleanUrl();
-	int getSize();
-	int getSize() const;
-	string getNormalizedUrl();
-
-	string getDomain();
-
-	bool isBrDomain();
-
-};
+char* getCleanUrl(string url);
+bool isBrDomain(string url);
+string canonicalizeUrl(string url);
+int getURLsize(string url);
+string getNormalizedUrl(string url);
+string getDomain(string url);
 
 #endif

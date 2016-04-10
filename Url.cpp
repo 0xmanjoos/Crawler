@@ -1,52 +1,73 @@
 #include "Url.h"
 
-// Constructors
+// Remove "http[s]?://" from url
+char* getCleanUrl(string url){
+	string http ("http");
+	string delimitation ("://");
+	string new_url = url;
+	size_t found = url.find(http); // Locate the position where "http" starts in the url
 
-Url::Url(){
-	this->size = 0;
+	// Test if "http" is within the url
+	if (found!=std::string::npos){
+		// Teste if "http" starts in the beginning of the url
+		if (!found){
+			// Locate the position where "://" starts in the url
+			found = url.find(delimitation, http.size());
+			// Tests if "://" is within the url
+			if (found!=std::string::npos){
+				// Remove "http[s]?://" from the url
+				new_url = url.erase(0,found+delimitation.size());
+			}
+		}
+
+	}
+
+	// Converting string to char*
+	char* final_url = new char[new_url.size()+1];
+	std::copy(new_url.begin(), new_url.end(), final_url);
+	final_url[new_url.size()] = '\0';
+
+	return final_url;
 }
 
-Url::Url(char* url){
-	this->url = this->canonicalizeUrl(url);
-	this->size = this->getURLsize(this->url);
+bool isBrDomain(string url){
+	string domain = getDomain(url);
+	string delimitation (".br");
+
+	if (domain.back() == '/'){
+		domain.pop_back();
+	}
+
+	size_t found = domain.find(delimitation);
+
+	return (found == (domain.size()-delimitation.size()));
+
 }
 
-Url::Url(string url){
-	this->url = this->canonicalizeUrl(url);
-	this->size = this->getURLsize(this->url);
+
+//Also removes "www."
+string canonicalizeUrl(string url){
+	CkString new_url;
+	CkSpider spider;
+
+	spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
+
+	return ((char*) new_url.getString());
+
 }
 
-Url::Url(CkString url){
-	// this->url = (char*) url.getString();
-	this->url = this->canonicalizeUrl(url.getString());
-	this->size = this->getURLsize(this->url);
-}
-
-Url::Url(Url const& url){
-	this->url = url.getUrl();
-	this->size = url.getSize();
-}
-
-// Destructor
-
-Url::~Url(){
-	// this->size = 0;
-	// delete(&list);
-	// del(list); // ?
-}
-
-int Url::getURLsize(string url){
+int getURLsize(string url){
 	CkString canonicalized_url, domain_url, clean_url, path_url, aux_ckstr;
 	string aux_str;
 	CkStringArray *aux;
 	int domain_size = 0, size = 0;
 
-	canonicalized_url = this->canonicalizeUrl(url).c_str();
+	canonicalized_url = canonicalizeUrl(url).c_str();
 	
 	// printf("\tURL: %s\n", url.getString());
 	// printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
 
-	clean_url = this->cleaningURL((char*) canonicalized_url.getString());
+	clean_url = getCleanUrl((char*) canonicalized_url.getString());
 	// cout << "\tClean URL: " << clean_url.getString() << endl;
 
 	// Check if there is something after "http[s]?://""
@@ -78,108 +99,11 @@ int Url::getURLsize(string url){
 
 }
 
-// Remove "http[s]?://" from url
 
-// CkString chop
-
-char* Url::cleaningURL(string url){
-	string http ("http");
-	string delimitation ("://");
-	string new_url = url;
-	size_t found = url.find(http); // Locate the position where "http" starts in the url
-
-	// Test if "http" is within the url
-	if (found!=std::string::npos){
-		// Teste if "http" starts in the beginning of the url
-		if (!found){
-			// Locate the position where "://" starts in the url
-			found = url.find(delimitation, http.size());
-			// Tests if "://" is within the url
-			if (found!=std::string::npos){
-				// Remove "http[s]?://" from the url
-				new_url = url.erase(0,found+delimitation.size());
-			}
-		}
-
-	}
-
-	// Converting string to char*
-	char* final_url = new char[new_url.size()+1];
-	std::copy(new_url.begin(), new_url.end(), final_url);
-	final_url[new_url.size()] = '\0';
-
-	return final_url;
-}
-
-// CkString Url::canonicalizeUrl(string url){
-//Also removes "www."
-string Url::canonicalizeUrl(string url){
-	CkString new_url;
-	CkSpider spider;
-
-	spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
-
-	return ((char*) new_url.getString());
-
-}
-
-
-void Url::setUrl(char* url){
-	this->url = this->canonicalizeUrl(url);
-	// cout << "Url: " << this->url << endl;
-	this->size = this->getURLsize(this->url);
-}
-
-void Url::setUrl(string url){
-	this->url = this->canonicalizeUrl(url);
-	// cout << this->url << endl;
-	this->size = this->getURLsize(this->url);
-	// cout << "\tWord In: " << this->url << endl;
-}
-
-void Url::setUrl(const char* url){
-	// size_t len = strlen(url);
-	// this->url = new char[len+1];
-	// strncpy(this->url, url, len);
-	// this->url[len] = '\0';
-	// this->size = this->getURLsize(url);
-	// this->url = url;
-	this->url = this->canonicalizeUrl(url);
-	this->size = this->getURLsize(this->url);
-}
-
-void Url::setUrl(CkString url){
-	// this->url = (char*) url.getString();
-	this->url = this->canonicalizeUrl(url.getString());
-	this->size = this->getURLsize(this->url);
-	// cout << "\tWord In: " << this->url << endl;
-}
-
-string Url::getUrl(){
-	return this->url;
-}
-
-string Url::getUrl() const {
-	return this->url;
-}
-
-string Url::getCleanUrl(){
-	string url = this->cleaningURL(this->url);
-
-	return url;
-}
-
-int Url::getSize(){
-	return (int) size;
-}
-
-int Url::getSize() const {
-	return (int) size;
-}
-
-string Url::getNormalizedUrl(){
-	string url = this->canonicalizeUrl(this->url);
+string getNormalizedUrl(string url){
 	string delimitation ("www.");
+
+	url = canonicalizeUrl(url);
 
 	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
 
@@ -198,25 +122,11 @@ string Url::getNormalizedUrl(){
 	return url;
 }
 
-string Url::getDomain(){
+string getDomain(string url){
 	CkSpider spider;
 	CkString domain;
 
-	spider.GetUrlDomain(this->url.c_str(), domain);
+	spider.GetUrlDomain(url.c_str(), domain);
 
 	return domain.getString();
-}
-
-bool Url::isBrDomain(){
-	string domain = this->getDomain();
-	string delimitation (".br");
-
-	if (domain.back() == '/'){
-		domain.pop_back();
-	}
-
-	size_t found = domain.find(delimitation);
-
-	return (found == (domain.size()-delimitation.size()));
-
 }

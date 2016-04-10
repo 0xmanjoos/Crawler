@@ -14,22 +14,19 @@ PriorityQueue::~PriorityQueue(){
 	// del(list); // ?
 }
 
-void PriorityQueue::queueURL(Url url){
-	// cout << "\tQueueing " << url.getUrl() << endl;
-	if (url.getSize() > 0){
-		this->list.push(url);
-		// cout << "\tQueueing " << url.getUrl() << endl;
-		this->size++;
-	}
+void PriorityQueue::queueURL(string url){
+	this->list.push(url);
+	this->size++;
 }
 
-Url PriorityQueue::dequeueURL(){
-	Url url ((char*)"");
+string PriorityQueue::dequeueURL(){
+	// Url url ((char*)"");
+	string url;
 
 	// url.setUrl("No URL");
 
 	if (!this->list.empty()){
-		url.setUrl(this->list.top().getUrl());
+		url = this->list.top();
 		// cout << "\tDequeueing " << url.getUrl() << endl;
 		this->size--;
 		this->list.pop();
