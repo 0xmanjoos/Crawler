@@ -33,7 +33,6 @@ public:
 	string backingUp();
 
 	bool empty();
-
 };
 
 #endif

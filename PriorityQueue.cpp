@@ -36,13 +36,6 @@ int PriorityQueue::getSize(){
 	return this->list.size();
 }
 
-string PriorityQueue::backingUp(){
-	// string url = this->list.pop_back();
-	// this->size--;
-
-	// return url;
-}
-
 bool PriorityQueue::empty(){
 	return this->list.empty();
 }

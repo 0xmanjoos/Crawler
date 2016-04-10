@@ -16,14 +16,14 @@
 #define HTML_FILENAME "htmls/html_files"
 #define LIMIT_HTML_FILE_SIZE 300000000 // 300 MB
 
-#define LIMIT_MEM_LOG 1000
+#define LIMIT_MEM_LOG 500
 
-#define BACKUP_QUEUE_SIZE 100000
-#define KEEPING_FROM_BACKUP 10000
+#define BACKUP_QUEUE_SIZE 25000
+#define KEEPING_FROM_BACKUP 2000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 
-const std::chrono::minutes BACKUP_SLEEP_TIME(30);
+const std::chrono::minutes BACKUP_SLEEP_TIME(3);
 const std::chrono::seconds SLEEP_TIME(30);
 
 using namespace std;
@@ -58,7 +58,7 @@ int main(){
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
 
-	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out | ios::app);
+	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
 	backup_queue.close();
 	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
 
@@ -197,7 +197,7 @@ void crawling(int id){
 
 				for (i = 0; i < size_unspired; i++){
 					spider.GetUnspideredUrl(0, ckurl);
-					url = ckurl.getString();
+					url = getNormalizedUrl(ckurl.getString());
 					spider.SkipUnspidered(0);
 
 					url_size = getURLsize(url);
@@ -206,9 +206,9 @@ void crawling(int id){
 						// cout_mutex.lock();
 						// cout << "visited_url" << " mutex locked" << endl;
 						// cout_mutex.unlock();
-						if (!visited_url[getNormalizedUrl(url)]){
+						if (!visited_url[url]){
 							local_to_queue.push_back(url);
-							visited_url[getNormalizedUrl(url)] =  true;
+							visited_url[url] =  true;
 						} 
 						// cout_mutex.lock();
 						// cout << "visited_url" << " mutex unlocked" << endl;
@@ -221,7 +221,7 @@ void crawling(int id){
 
 				for (i = 0; i < size_unspired; i++){
 					spider.GetOutboundLink(i, ckurl);
-					url = ckurl.getString();
+					url = getNormalizedUrl(ckurl.getString());
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
@@ -229,9 +229,9 @@ void crawling(int id){
 						// cout_mutex.lock();
 						// cout << "visited_url" << " mutex locked" << endl;
 						// cout_mutex.unlock();
-						if (!visited_url[getNormalizedUrl(url)]){
+						if (!visited_url[url]){
 							local_to_queue.push_back(url);
-							visited_url[getNormalizedUrl(url)] =  true;
+							visited_url[url] =  true;
 						}
 						// cout_mutex.lock();
 						// cout << "visited_url" << " mutex unlocked" << endl;
@@ -254,6 +254,7 @@ void crawling(int id){
 					// cout << "urls_queue" << " mutex unlocked" << endl;
 					// cout_mutex.unlock();
 					urls_queue_mutex.unlock();
+					local_to_queue.clear();
 				}
 
 
@@ -294,6 +295,11 @@ void crawling(int id){
 		} else {
 			havent_slept = false;
 			restoring_backup();
+
+			status_log_mutex.lock();
+			status_log << "Thread " << i << " is dead going to sleep." << endl;
+			status_log_mutex.unlock();
+
 			std::this_thread::sleep_for(SLEEP_TIME);
 		}
 	}
@@ -328,7 +334,7 @@ void initializing_queue(vector<string> v){
 	high_resolution_clock::time_point t1, t2;
 
 	for (i = 0; i < v.size(); i++){
-		urls_queue.queueURL(v[i]);
+		urls_queue.queueURL(getNormalizedUrl(v[i]));
 		visited_url[getNormalizedUrl(v[i])] = true;
 	}
 
@@ -373,14 +379,14 @@ void initializing_queue(vector<string> v){
 			size_unspired = spider.get_NumUnspidered();
 			for (i = 0; i < size_unspired; i++){
 				spider.GetUnspideredUrl(0, ckurl);
-				url = ckurl.getString();
+				url = getNormalizedUrl(ckurl.getString());
 				spider.SkipUnspidered(0);
 
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-					if (!visited_url[getNormalizedUrl(url)]){
+					if (!visited_url[url]){
 						urls_queue.queueURL(url);
-						visited_url[getNormalizedUrl(url)] =  true;
+						visited_url[url] =  true;
 					}
 				}
 
@@ -390,13 +396,13 @@ void initializing_queue(vector<string> v){
 
 			for (i = 0; i < size_unspired; i++){
 				spider.GetOutboundLink(i, ckurl);
-				url = ckurl.getString();
+				url = getNormalizedUrl(ckurl.getString());
 
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
-					if (!visited_url[getNormalizedUrl(url)]){
+					if (!visited_url[url]){
 						urls_queue.queueURL(url);
-						visited_url[getNormalizedUrl(url)] =  true;
+						visited_url[url] =  true;
 					}
 				}
 
@@ -421,7 +427,7 @@ void backingup_queue(int id){
 	int i;
 	double total_duration;
 	vector<string> v;
-	string output;
+	// string output;
 	high_resolution_clock::time_point t1, t2;
 
 	std::this_thread::sleep_for(BACKUP_SLEEP_TIME);
@@ -442,15 +448,19 @@ void backingup_queue(int id){
 				v.push_back(urls_queue.dequeueURL());
 			}
 			while(urls_queue.getSize() > 0){
-				output.append(urls_queue.dequeueURL());
-				output.append("\n");
+				// output.append(urls_queue.dequeueURL());
+				// output.append("\n");
+				backup_queue << urls_queue.dequeueURL() << endl;
 			}
 			for (i = 0; i < v.size(); i++){
 				urls_queue.queueURL(v[i]);
 			}
 			urls_queue_mutex.unlock();
 
-			backup_queue << output;
+			// backup_queue << output;
+
+			v.clear();
+			// output.clear();
 
 			status_log_mutex.lock();
 			t2 = high_resolution_clock::now();
