@@ -3,7 +3,6 @@
 // Constructors
 
 PriorityQueue::PriorityQueue(){
-	this->size = 0;
 }
 
 // Destructor
@@ -16,7 +15,6 @@ PriorityQueue::~PriorityQueue(){
 
 void PriorityQueue::queueURL(string url){
 	this->list.push(url);
-	this->size++;
 }
 
 string PriorityQueue::dequeueURL(){
@@ -28,7 +26,6 @@ string PriorityQueue::dequeueURL(){
 	if (!this->list.empty()){
 		url = this->list.top();
 		// cout << "\tDequeueing " << url.getUrl() << endl;
-		this->size--;
 		this->list.pop();
 	}
 
@@ -36,5 +33,16 @@ string PriorityQueue::dequeueURL(){
 }
 
 int PriorityQueue::getSize(){
-	return this->size;
+	return this->list.size();
+}
+
+string PriorityQueue::backingUp(){
+	// string url = this->list.pop_back();
+	// this->size--;
+
+	// return url;
+}
+
+bool PriorityQueue::empty(){
+	return this->list.empty();
 }

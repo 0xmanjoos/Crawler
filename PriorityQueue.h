@@ -16,7 +16,6 @@ class PriorityQueue {
 private:
 
 	priority_queue<string, std::vector<string>, CompareURL> list;
-	int size;
 	
 public:
 	// Constructors
@@ -31,6 +30,9 @@ public:
 	// Getters
 	string dequeueURL();
 	int getSize();
+	string backingUp();
+
+	bool empty();
 
 };
 
