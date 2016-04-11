@@ -24,4 +24,4 @@ clean:
 	rm *.o crawler
 
 dir:
-	mkdir htmls logs backup
+	mkdir htmls logs backup cache
