@@ -105,13 +105,14 @@ string getNormalizedUrl(string url){
 
 	url = canonicalizeUrl(url);
 
-	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
+	// return url;
 
+	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
 	// Test if "www." is within the url
 	if (found!=std::string::npos){
 		// Teste if "www." starts in the beginning of the url, or after "http://" or "https://"
 		if ((!found)||(found >= 7 && found <= 8)){
-			url = url.erase(found,found+delimitation.size());
+			url = url.erase(found,delimitation.size());
 		}
 	}
 

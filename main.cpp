@@ -53,6 +53,11 @@ int main(){
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://www.globo.com"	};
 	vector<thread> ths;
 
+	// cout << getNormalizedUrl("http://www.gamevicio.com") << endl;
+
+	// exit(0);
+
+
 	logs.open("logs/log.csv", std::ofstream::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
@@ -297,7 +302,7 @@ void crawling(int id){
 			restoring_backup();
 
 			status_log_mutex.lock();
-			status_log << "Thread " << i << " is dead going to sleep." << endl;
+			status_log << "Thread " << i << " is going to sleep." << endl;
 			status_log_mutex.unlock();
 
 			std::this_thread::sleep_for(SLEEP_TIME);
@@ -380,6 +385,7 @@ void initializing_queue(vector<string> v){
 			for (i = 0; i < size_unspired; i++){
 				spider.GetUnspideredUrl(0, ckurl);
 				url = getNormalizedUrl(ckurl.getString());
+				cout << ckurl.getString() << " " << url << endl;
 				spider.SkipUnspidered(0);
 
 				url_size = getURLsize(url);
