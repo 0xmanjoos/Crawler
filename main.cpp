@@ -283,7 +283,7 @@ void crawling(int id, string in_buffer){
 				// if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
 				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE){
 
-					if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
+					if (urls_queue.getSize() <= BACKUP_QUEUE_SIZE){
 						urls_queue_mutex.lock();
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex locked" << endl;
