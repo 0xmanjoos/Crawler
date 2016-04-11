@@ -8,3 +8,4 @@ logs/*
 htmls/*
 backup/*
 *.out
+cache/*
