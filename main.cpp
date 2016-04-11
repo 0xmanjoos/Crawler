@@ -144,11 +144,11 @@ void crawling(int id){
 				status_log_mutex.unlock();
 			}
 
+			urls_queue_mutex.lock();
 			if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
-				urls_queue_mutex.lock();
 				backingup_queue();
-				urls_queue_mutex.unlock();
 			}
+			urls_queue_mutex.unlock();
 
 			t1 = high_resolution_clock::now();
 
