@@ -14,11 +14,11 @@
 #define SIZE_LOCAL_QUEUE 100
 
 #define HTML_FILENAME "htmls/html"
-#define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
+#define LIMIT_HTML_FILE_SIZE 500000000 // 500 MB
 
 #define LIMIT_MEM_LOG 500
 
-#define BACKUP_QUEUE_SIZE 25000
+#define BACKUP_QUEUE_SIZE 50000
 #define KEEPING_FROM_BACKUP 2000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
@@ -61,8 +61,6 @@ int main(){
 	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
 	backup_queue.close();
 	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
-
-	buffer.append("|||");
 
 	t0 = high_resolution_clock::now();
 
@@ -198,7 +196,7 @@ void crawling(int id, string in_buffer){
 				// // cout_mutex.lock();
 				// // cout << "buffer" << " mutex locked" << endl;
 				// // cout_mutex.unlock();
-				buffer.append(" ");
+				buffer.append("||| ");
 				buffer.append(url);
 				buffer.append(" | ");
 				buffer.append(" |||");
@@ -280,25 +278,29 @@ void crawling(int id, string in_buffer){
 					}
 				}
 
-				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
-					urls_queue_mutex.lock();
-					// cout_mutex.lock();
-					// cout << "urls_queue" << " mutex locked" << endl;
-					// cout_mutex.unlock();
-					vector_size = local_to_queue.size();
-					for (i = 0; i < vector_size; i++){
-						urls_queue.queueURL(local_to_queue.back());
-						local_to_queue.pop_back();
-					}
-					// cout_mutex.lock();
-					// cout << "urls_queue" << " mutex unlocked" << endl;
-					// cout_mutex.unlock();
-					urls_queue_mutex.unlock();
+				spider.ClearOutboundLinks();
+
+				// if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
+				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE){
+
+					if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
+						urls_queue_mutex.lock();
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex locked" << endl;
+						// cout_mutex.unlock();
+						vector_size = local_to_queue.size();
+						for (i = 0; i < vector_size; i++){
+							urls_queue.queueURL(local_to_queue.back());
+							local_to_queue.pop_back();
+						}
+						// cout_mutex.lock();
+						// cout << "urls_queue" << " mutex unlocked" << endl;
+						// cout_mutex.unlock();
+						urls_queue_mutex.unlock();	
+					} 
+
 					local_to_queue.clear();
 				}
-
-
-				spider.ClearOutboundLinks();
 
 				t2 = high_resolution_clock::now();
 
