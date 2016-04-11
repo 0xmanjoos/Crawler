@@ -385,7 +385,7 @@ void initializing_queue(vector<string> v){
 			for (i = 0; i < size_unspired; i++){
 				spider.GetUnspideredUrl(0, ckurl);
 				url = getNormalizedUrl(ckurl.getString());
-				cout << ckurl.getString() << " " << url << endl;
+				// cout << ckurl.getString() << " " << url << endl;
 				spider.SkipUnspidered(0);
 
 				url_size = getURLsize(url);
