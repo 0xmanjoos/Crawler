@@ -83,6 +83,8 @@ int main(){
 		buffer.clear();
 	}
 
+	status_log << "Threads running" << endl;
+
 	for (auto& th : ths) {
 		th.join();
 	}
@@ -144,6 +146,7 @@ void crawling(int id, string in_buffer){
 			havent_slept = true;
 			// Checking if local queue is empty
 			if (local_queue.empty()){
+				local_queue.shrink_to_fit();
 				urls_queue_mutex.lock();
 				dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
 				for (i = 0; i < dequeue_size; i++){
@@ -296,10 +299,10 @@ void crawling(int id, string in_buffer){
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex unlocked" << endl;
 						// cout_mutex.unlock();
-						urls_queue_mutex.unlock();	
+						urls_queue_mutex.unlock();
 					} 
-
 					local_to_queue.clear();
+					local_to_queue.shrink_to_fit();
 				}
 
 				t2 = high_resolution_clock::now();
@@ -326,7 +329,7 @@ void crawling(int id, string in_buffer){
 				if (log_entrance >= LIMIT_MEM_LOG){
 					logs << log_buffer;
 					log_buffer.clear();
-
+					log_buffer.shrink_to_fit();
 				}
 
 				// cout_mutex.lock();
@@ -508,7 +511,8 @@ void backingup_queue(){
 		v.erase(v.cbegin());
 	}
 
-	// v.clear();
+	v.clear();
+	v.shrink_to_fit();
 
 	status_log_mutex.lock();
 	t2 = high_resolution_clock::now();

@@ -39,3 +39,7 @@ int PriorityQueue::getSize(){
 bool PriorityQueue::empty(){
 	return this->list.empty();
 }
+
+// void PriorityQueue::gettingSpace(){
+// 	this->list.shrink_to_fit();
+// }

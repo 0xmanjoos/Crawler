@@ -33,6 +33,8 @@ public:
 	string backingUp();
 
 	bool empty();
+
+	// void gettingSpace();
 };
 
 #endif
