@@ -22,8 +22,6 @@
 #define KEEPING_FROM_BACKUP 2000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
-
-const std::chrono::minutes BACKUP_SLEEP_TIME(3);
 const std::chrono::seconds SLEEP_TIME(30);
 
 using namespace std;
@@ -43,7 +41,7 @@ high_resolution_clock::time_point t0;
 
 void crawling(int id);
 void initializing_queue(vector<string> v);
-void backingup_queue(int id);
+void backingup_queue();
 void restoring_backup();
 
 int main(){
@@ -76,9 +74,7 @@ int main(){
 	status_log << "Initial queue size: " << urls_queue.getSize() << endl;
 	status_log << "Creating threads" << endl;
 
-	ths.push_back(thread(&backingup_queue, 0));
-
-	for (i = 1; i <= NUM_THREADS; i++){
+	for (i = 0; i < NUM_THREADS; i++){
 		ths.push_back(thread(&crawling, i));
 	}
 
@@ -146,6 +142,12 @@ void crawling(int id){
 				total_duration = duration_cast<seconds>( t2 - t0 ).count();
 				status_log << "Queue size: " << urls_queue.getSize() << " (" << total_duration << " s)" << endl;
 				status_log_mutex.unlock();
+			}
+
+			if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
+				urls_queue_mutex.lock();
+				backingup_queue();
+				urls_queue_mutex.unlock();
 			}
 
 			t1 = high_resolution_clock::now();
@@ -299,13 +301,9 @@ void crawling(int id){
 			}
 		} else {
 			havent_slept = false;
+			urls_queue_mutex.lock();
 			restoring_backup();
-
-			status_log_mutex.lock();
-			status_log << "Thread " << i << " is going to sleep." << endl;
-			status_log_mutex.unlock();
-
-			std::this_thread::sleep_for(SLEEP_TIME);
+			urls_queue_mutex.unlock();
 		}
 	}
 
@@ -429,56 +427,44 @@ void initializing_queue(vector<string> v){
 	}
 }
 
-void backingup_queue(int id){
+void backingup_queue(){
 	int i;
 	double total_duration;
 	vector<string> v;
-	// string output;
+
 	high_resolution_clock::time_point t1, t2;
 
-	std::this_thread::sleep_for(BACKUP_SLEEP_TIME);
+	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out | ios::app);
 
-	while(urls_queue.getSize() > 0){
-		if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
-			backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out | ios::app);
+	status_log_mutex.lock();
+	t1 = high_resolution_clock::now();
 
-			status_log_mutex.lock();
-			t1 = high_resolution_clock::now();
+	total_duration = duration_cast<seconds>( t1 - t0 ).count();
+	status_log << endl << "Backing up queue (" << total_duration << " s)" << endl;
+	status_log_mutex.unlock();
 
-			total_duration = duration_cast<seconds>( t1 - t0 ).count();
-			status_log << endl << "Backing up queue (" << total_duration << " s)" << endl;
-			status_log_mutex.unlock();
-
-			urls_queue_mutex.lock();
-			for (i = 0; i < KEEPING_FROM_BACKUP; i++){
-				v.push_back(urls_queue.dequeueURL());
-			}
-			while(urls_queue.getSize() > 0){
-				// output.append(urls_queue.dequeueURL());
-				// output.append("\n");
-				backup_queue << urls_queue.dequeueURL() << endl;
-			}
-			for (i = 0; i < v.size(); i++){
-				urls_queue.queueURL(v[i]);
-			}
-			urls_queue_mutex.unlock();
-
-			// backup_queue << output;
-
-			v.clear();
-			// output.clear();
-
-			status_log_mutex.lock();
-			t2 = high_resolution_clock::now();
-
-			total_duration = duration_cast<seconds>( t2 - t1 ).count();
-			status_log << "Done backing up queue (" << total_duration << " s)" << endl << endl;
-			status_log_mutex.unlock();
-
-		}
-		backup_queue.close();
-		std::this_thread::sleep_for(BACKUP_SLEEP_TIME);		
+	for (i = 0; i < KEEPING_FROM_BACKUP; i++){
+		v.push_back(urls_queue.dequeueURL());
 	}
+	while(urls_queue.getSize() > 0){
+		// output.append(urls_queue.dequeueURL());
+		// output.append("\n");
+		backup_queue << urls_queue.dequeueURL() << endl;
+	}
+	for (i = 0; i < v.size(); i++){
+		urls_queue.queueURL(v[i]);
+	}
+
+	v.clear();
+
+	status_log_mutex.lock();
+	t2 = high_resolution_clock::now();
+
+	total_duration = duration_cast<seconds>( t2 - t1 ).count();
+	status_log << "Done backing up queue (" << total_duration << " s)" << endl << endl;
+	status_log_mutex.unlock();
+
+	backup_queue.close();
 }
 
 void restoring_backup(){
@@ -494,12 +480,10 @@ void restoring_backup(){
 	status_log << endl << "Restoring queue (" << total_duration << " s)" << endl;
 	status_log_mutex.unlock();
 
-	urls_queue_mutex.lock();
-	while(getline(reading_backup_queue,url) && i < KEEPING_FROM_BACKUP){
+	while(getline(reading_backup_queue,url) && i < KEEPING_FROM_BACKUP && urls_queue.getSize() < BACKUP_QUEUE_SIZE){
 		urls_queue.queueURL(url);
 		i++;
 	}
-	urls_queue_mutex.unlock();
 
 	status_log_mutex.lock();
 	t2 = high_resolution_clock::now();
