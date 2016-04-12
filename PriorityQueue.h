@@ -15,7 +15,8 @@ class PriorityQueue {
 
 private:
 
-	priority_queue<string, std::vector<string>, CompareURL> list;
+	// priority_queue<string, std::vector<string>, CompareURL> list;
+	vector<string> list;
 	
 public:
 	// Constructors

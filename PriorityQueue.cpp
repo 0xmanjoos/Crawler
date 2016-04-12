@@ -14,7 +14,7 @@ PriorityQueue::~PriorityQueue(){
 }
 
 void PriorityQueue::queueURL(string url){
-	this->list.push(url);
+	this->list.push_back(url);
 }
 
 string PriorityQueue::dequeueURL(){
@@ -24,9 +24,10 @@ string PriorityQueue::dequeueURL(){
 	// url.setUrl("No URL");
 
 	if (!this->list.empty()){
-		url = this->list.top();
+		url = this->list.back();
 		// cout << "\tDequeueing " << url.getUrl() << endl;
-		this->list.pop();
+		this->list.pop_back();
+		this->list.shrink_to_fit();
 	}
 
 	return url;
