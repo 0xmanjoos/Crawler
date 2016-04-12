@@ -116,7 +116,7 @@ void crawling(int id, string buffer){
 
 	vector<string> local_queue, local_to_queue;
 
-	CkSpider spider;
+	CkSpider *spider;
 	CkString ckurl, domain, html;
 
 	high_resolution_clock::time_point t1, t2, tf;
@@ -175,19 +175,21 @@ void crawling(int id, string buffer){
 
 			ckurl = url.c_str();
 
-			spider.GetUrlDomain(ckurl.getString(), domain);
+			spider = new CkSpider();
 
-			spider.Initialize(domain.getString());
+			spider->GetUrlDomain(ckurl.getString(), domain);
 
-			spider.AddUnspidered(ckurl.getString());
+			spider->Initialize(domain.getString());
 
-			success = spider.CrawlNext();
+			spider->AddUnspidered(ckurl.getString());
+
+			success = spider->CrawlNext();
 
 			if (success) { 
 				// logging += "Evaluating " + url.getUrl() + "\n";
 				// logging = url.getUrl();
 
-				spider.get_LastHtml(html);
+				spider->get_LastHtml(html);
 
 				logging = html.getSizeUtf8();
 
@@ -217,12 +219,12 @@ void crawling(int id, string buffer){
 					html_files[i].open(filename, ios::out | ios::app);
 				}
 
-				size_unspired = spider.get_NumUnspidered();
+				size_unspired = spider->get_NumUnspidered();
 
 				for (i = 0; i < size_unspired; i++){
-					spider.GetUnspideredUrl(0, ckurl);
+					spider->GetUnspideredUrl(0, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
-					spider.SkipUnspidered(0);
+					spider->SkipUnspidered(0);
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
@@ -241,10 +243,10 @@ void crawling(int id, string buffer){
 					}
 				}
 
-				size_unspired = spider.get_NumOutboundLinks();
+				size_unspired = spider->get_NumOutboundLinks();
 
 				for (i = 0; i < size_unspired; i++){
-					spider.GetOutboundLink(i, ckurl);
+					spider->GetOutboundLink(i, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
 
 					url_size = getURLsize(url);
@@ -285,7 +287,7 @@ void crawling(int id, string buffer){
 				}
 
 
-				spider.ClearOutboundLinks();
+				spider->ClearOutboundLinks();
 
 				t2 = high_resolution_clock::now();
 
@@ -326,7 +328,9 @@ void crawling(int id, string buffer){
 			urls_queue_mutex.unlock();
 		}
 
-		spider.ClearSpideredUrls();
+		spider->ClearSpideredUrls();
+
+		free(spider);
 	}
 
 	status_log_mutex.lock();
