@@ -13,12 +13,12 @@
 #define THREAD_QUEUE_SIZE 20
 #define SIZE_LOCAL_QUEUE 100
 
-#define HTML_FILENAME "htmls/html"
-#define LIMIT_HTML_FILE_SIZE 500000000 // 500 MB
+#define HTML_FILENAME "htmls/html_files"
+#define LIMIT_HTML_FILE_SIZE 300000000 // 300 MB
 
 #define LIMIT_MEM_LOG 500
 
-#define BACKUP_QUEUE_SIZE 50000
+#define BACKUP_QUEUE_SIZE 25000
 #define KEEPING_FROM_BACKUP 2000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
@@ -34,12 +34,12 @@ ifstream reading_backup_queue;
 int index_file = 0, log_entrance = 0;
 string log_buffer;
 
-mutex urls_queue_mutex, visited_url_mutex, log_mutex, buffer_mutex, status_log_mutex, cout_mutex;
+mutex urls_queue_mutex, visited_url_mutex, log_mutex, status_log_mutex, cout_mutex;
 
 high_resolution_clock::time_point t0;
 
 
-void crawling(int id, string in_buffer);
+void crawling(int id, string buffer);
 string initializing_queue(vector<string> v);
 void backingup_queue();
 void restoring_backup();
@@ -47,11 +47,16 @@ void restoring_backup();
 int main(){
 	int i;
 
+	string buffer, filename;
+
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://www.globo.com"	};
 	vector<thread> ths;
 
-	string buffer, filename;
+	// cout << getNormalizedUrl("http://www.gamevicio.com") << endl;
+
+	// exit(0);
+
 
 	logs.open("logs/log.csv", std::ofstream::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
@@ -61,6 +66,8 @@ int main(){
 	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
 	backup_queue.close();
 	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
+
+	// buffer.append("|||");
 
 	t0 = high_resolution_clock::now();
 
@@ -75,21 +82,16 @@ int main(){
 		filename.append(to_string(i));
 		filename.append("-0");
 		// cout << filename << endl;
-		html_files[i].open(filename, ios::out | ios::app);		
-
+		html_files[i].open(filename, ios::out | ios::app);
 		ths.push_back(thread(&crawling, i, buffer));
-
-		filename.clear();
 		buffer.clear();
 	}
-
-	status_log << "Threads running" << endl;
 
 	for (auto& th : ths) {
 		th.join();
 	}
 
-	for (i = 0; i < NUM_THREADS; i++){
+	for(i = 0; i < NUM_THREADS; i++){
 		html_files[i].close();
 	}
 
@@ -104,13 +106,13 @@ int main(){
 	////////////////////////////////////////////////////////
 }
 
-void crawling(int id, string in_buffer){
+void crawling(int id, string buffer){
 	int i, size_unspired, logging, dequeue_size, vector_size, url_size;
-	int file_index = 0, file_size = in_buffer.size();
+	int file_index, file_size = buffer.size();
 	double duration, total_duration;
 	bool success, havent_slept = true;
 
-	string url, buffer, filename;
+	string url, filename;
 
 	vector<string> local_queue, local_to_queue;
 
@@ -118,12 +120,6 @@ void crawling(int id, string in_buffer){
 	CkString ckurl, domain, html;
 
 	high_resolution_clock::time_point t1, t2, tf;
-
-	// myfile.seekp (ios::end);
-
-	spider.put_CacheDir("cache/");
-	spider.put_FetchFromCache(true);
-	spider.put_UpdateCache(true);
 
 	// Initializing local queue
 	urls_queue_mutex.lock();
@@ -163,11 +159,11 @@ void crawling(int id, string in_buffer){
 				status_log_mutex.unlock();
 			}
 
-			urls_queue_mutex.lock();
-			if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
-				backingup_queue();
-			}
-			urls_queue_mutex.unlock();
+			// urls_queue_mutex.lock();
+			// if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
+			// 	backingup_queue();
+			// }
+			// urls_queue_mutex.unlock();
 
 			t1 = high_resolution_clock::now();
 
@@ -195,44 +191,31 @@ void crawling(int id, string in_buffer){
 
 				logging = html.getSizeUtf8();
 
-				// buffer_mutex.lock();
-				// // cout_mutex.lock();
-				// // cout << "buffer" << " mutex locked" << endl;
-				// // cout_mutex.unlock();
 				buffer.append("||| ");
 				buffer.append(url);
 				buffer.append(" | ");
 				buffer.append(" |||");
 				buffer.append(html.getString());
-
-				html_files[id] << buffer;
+				buffer.append(" ");
 
 				file_size+=buffer.size();
 
-				if (file_size > LIMIT_HTML_FILE_SIZE){
+				html_files[id] << buffer;
+
+				buffer.clear();
+				buffer.shrink_to_fit();
+
+				if (file_size >= LIMIT_HTML_FILE_SIZE){
 					html_files[id].close();
 					file_size = 0;
 					file_index++;
 					filename.append(HTML_FILENAME);
 					filename.append("-");
-					filename.append(to_string(id));
+					filename.append(to_string(i));
 					filename.append("-");
 					filename.append(to_string(file_index));
-					// html_files[i].open(HTML_FILENAME+"-"+to_string(i)+"-0", ios::out | ios::app);
-		
-					// html_files[id].open(HTML_FILENAME+"-"+to_string(file_index)+"-"+to_string(id), ios::out | ios::app);
 					html_files[i].open(filename, ios::out | ios::app);
-				// 	html_files << buffer;
-				// 	html_files.close();
-				// 	buffer.clear();
-				// 	index_file++;
 				}
-
-				// // cout_mutex.lock();
-				// // cout << "buffer" << " mutex unlocked" << endl;
-				// // cout_mutex.unlock();
-
-				// buffer_mutex.unlock();
 
 				size_unspired = spider.get_NumUnspidered();
 
@@ -281,17 +264,13 @@ void crawling(int id, string in_buffer){
 					}
 				}
 
-				spider.ClearOutboundLinks();
-
-				// if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
-				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE){
-
+				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
 					if (urls_queue.getSize() <= BACKUP_QUEUE_SIZE){
+						vector_size = local_to_queue.size();
 						urls_queue_mutex.lock();
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex locked" << endl;
 						// cout_mutex.unlock();
-						vector_size = local_to_queue.size();
 						for (i = 0; i < vector_size; i++){
 							urls_queue.queueURL(local_to_queue.back());
 							local_to_queue.pop_back();
@@ -300,10 +279,13 @@ void crawling(int id, string in_buffer){
 						// cout << "urls_queue" << " mutex unlocked" << endl;
 						// cout_mutex.unlock();
 						urls_queue_mutex.unlock();
-					} 
+					}
 					local_to_queue.clear();
 					local_to_queue.shrink_to_fit();
 				}
+
+
+				spider.ClearOutboundLinks();
 
 				t2 = high_resolution_clock::now();
 
@@ -329,7 +311,7 @@ void crawling(int id, string in_buffer){
 				if (log_entrance >= LIMIT_MEM_LOG){
 					logs << log_buffer;
 					log_buffer.clear();
-					log_buffer.shrink_to_fit();
+
 				}
 
 				// cout_mutex.lock();
@@ -376,10 +358,6 @@ string initializing_queue(vector<string> v){
 
 	high_resolution_clock::time_point t1, t2;
 
-	spider.put_CacheDir("cache/");
-	spider.put_FetchFromCache(true);
-	spider.put_UpdateCache(true);
-
 	for (i = 0; i < v.size(); i++){
 		urls_queue.queueURL(getNormalizedUrl(v[i]));
 		// visited_url[getNormalizedUrl(v[i])] = true;
@@ -409,13 +387,12 @@ string initializing_queue(vector<string> v){
 
 			logging = html.getSizeUtf8();
 
-			buffer.append(" ");
+			buffer.append("||| ");
 			buffer.append(url);
 			buffer.append(" | ");
 			buffer.append(" |||");
 			buffer.append(html.getString());
-
-			// html_files[0] << buffer;
+			buffer.append(" ");
 
 			// if (buffer.size() > LIMIT_HTML_FILE_SIZE){
 			// 	html_files.open(HTML_FILENAME+to_string(index_file));
@@ -472,12 +449,11 @@ string initializing_queue(vector<string> v){
 		loop_control++;
 	}
 
-	// html_files[0].close();
 	return buffer;
 }
 
 void backingup_queue(){
-	int i, loop_size;
+	int i;
 	double total_duration;
 	vector<string> v;
 
@@ -500,15 +476,8 @@ void backingup_queue(){
 		// output.append("\n");
 		backup_queue << urls_queue.dequeueURL() << endl;
 	}
-
-	// free(urls_queue);
-
-	// urls_queue = new PriorityQueue();
-
-	loop_size = v.size();
-	for (i = 0; i < loop_size; i++){
-		urls_queue.queueURL(v.front());
-		v.erase(v.cbegin());
+	for (i = 0; i < v.size(); i++){
+		urls_queue.queueURL(v[i]);
 	}
 
 	v.clear();
