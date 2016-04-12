@@ -50,7 +50,7 @@ int main(){
 	string buffer, filename;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia"	};
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com"	};
 	vector<thread> ths;
 
 	// cout << "here";
@@ -75,13 +75,14 @@ int main(){
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
-		// filename.append(HTML_FILENAME);
-		// filename.append("-");
-		// filename.append(to_string(i));
-		// filename.append("-0");
-		// html_files[i].open(filename, ios::out | ios::app);
-		// html_files[i] << "|||";
-		// filename.clear();
+		filename.append(HTML_FILENAME);
+		filename.append("-");
+		filename.append(to_string(i));
+		filename.append("-0");
+		html_files[i].open(filename, ios::out);
+		html_files[i] << "|||";
+		html_files[i].close();
+		filename.clear();
 
 		// Creating threads
 		ths.push_back(thread(&crawling, i, buffer));
@@ -121,6 +122,14 @@ void crawling(int id, string buffer){
 	CkString ckurl, domain, html;
 
 	high_resolution_clock::time_point t1, t2, tf;
+
+
+	filename.append(HTML_FILENAME);
+	filename.append("-");
+	filename.append(to_string(id));
+	filename.append("-0");
+	html_files[i].open(filename, ios::out | ios::app);
+	filename.clear();
 
 	// Initializing local queue
 	urls_queue_mutex.lock();
@@ -380,8 +389,6 @@ string initializing_queue(vector<string> v){
 		t1 = high_resolution_clock::now();
 
 		url = urls_queue.dequeueURL();
-
-		cout << url << endl;
 
 		ckurl = url.c_str();
 
