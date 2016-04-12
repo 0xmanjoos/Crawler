@@ -1,7 +1,21 @@
 #include "Url.h"
 
+void split(const string& s, char c, vector<string>& v) {
+	string::size_type i = 0;
+	string::size_type j = s.find(c);
+
+	while (j != string::npos) {
+		v.push_back(s.substr(i, j-i));
+		i = ++j;
+		j = s.find(c, j);
+
+		if (j == string::npos)
+		v.push_back(s.substr(i, s.length()));
+	}
+}
+
 // Remove "http[s]?://" from url
-char* getCleanUrl(string url){
+string getCleanUrl(string url){
 	string http ("http");
 	string delimitation ("://");
 	string new_url = url;
@@ -22,12 +36,7 @@ char* getCleanUrl(string url){
 
 	}
 
-	// Converting string to char*
-	char* final_url = new char[new_url.size()+1];
-	std::copy(new_url.begin(), new_url.end(), final_url);
-	final_url[new_url.size()] = '\0';
-
-	return final_url;
+	return new_url;
 }
 
 bool isBrDomain(string url){
@@ -44,7 +53,6 @@ bool isBrDomain(string url){
 
 }
 
-
 //Also removes "www."
 string canonicalizeUrl(string url){
 	CkString new_url;
@@ -57,42 +65,54 @@ string canonicalizeUrl(string url){
 }
 
 int getURLsize(string url){
-	CkString canonicalized_url, domain_url, clean_url, path_url, aux_ckstr;
-	string aux_str;
-	CkStringArray *aux;
-	int domain_size = 0, size = 0;
+	CkString canonicalized_url;
+	string s;
+	int i = 0, size = 0;
+	vector<string> tokens;
 
 	canonicalized_url = canonicalizeUrl(url).c_str();
 	
-	// printf("\tURL: %s\n", url.getString());
-	// printf("\tCanonicalized URL: %s\n", canonicalized_url.getString());
+	s = getCleanUrl(canonicalized_url.getString());
 
-	clean_url = getCleanUrl((char*) canonicalized_url.getString());
-	// cout << "\tClean URL: " << clean_url.getString() << endl;
-
-	// Check if there is something after "http[s]?://""
-	if (clean_url.getNumChars() <= 0){
+	if (s.size() <= 0){
 		return 0;
 	}
 
-	// 
-	// /* Separating path */
-	// aux_str = string(clean_url.getString());
-	// aux_str = aux_str.erase(0,string(domain_url).size()+1);
+	split(s, '/', tokens);
 
-	// cout << "\tPath: " << aux_str << endl;
-	// 
 
-	// Counting path's size (www.ufmg.br -> size = 3)	
-	aux = clean_url.split('/', true, true, false);
-	size += aux->get_Count()-1; // -1 because it is ignoring the domain, which will be considered later
+	auto it = begin(tokens);
+	while(it != end(tokens)){
+		if (tokens[i].size() <= 0){
+			tokens.erase(tokens.cbegin()+i);
+		} else {
+			++it;
+			i++;	
+		}
+	}
 
-	// Counting domain's size (www.ufmg.br -> size = 3)
-	aux->StrAt(0, aux_ckstr);
-	aux = aux_ckstr.split('.', true, true, false);
-	size += aux->get_Count();
 
-	// printf("\tURL size: %d\n\n", size);
+	size += tokens.size() - 1;
+
+	s = tokens[0];
+	tokens.clear();
+	split(s, '.', tokens);
+
+	if (tokens[0].compare("www") == 0){
+		tokens.erase(tokens.cbegin());
+	}
+
+	it = begin(tokens);
+	while(it != end(tokens)){
+		if (tokens[i].size() <= 0){
+			tokens.erase(tokens.cbegin()+i);
+		} else {
+			++it;
+			i++;	
+		}
+	}
+
+	size += tokens.size();
 
 
 	return size;

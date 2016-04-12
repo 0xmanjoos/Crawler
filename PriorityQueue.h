@@ -15,8 +15,7 @@ class PriorityQueue {
 
 private:
 
-	// priority_queue<string, std::vector<string>, CompareURL> list;
-	vector<string> list;
+	priority_queue<string, std::vector<string>, CompareURL> list;
 	
 public:
 	// Constructors
@@ -35,7 +34,6 @@ public:
 
 	bool empty();
 
-	// void gettingSpace();
 };
 
 #endif

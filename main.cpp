@@ -14,12 +14,12 @@
 #define SIZE_LOCAL_QUEUE 100
 
 #define HTML_FILENAME "htmls/html_files"
-#define LIMIT_HTML_FILE_SIZE 300000000 // 300 MB
+#define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
 
-#define LIMIT_MEM_LOG 500
+#define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 25000
-#define KEEPING_FROM_BACKUP 2000
+#define BACKUP_QUEUE_SIZE 50000
+#define KEEPING_FROM_BACKUP 5000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 const std::chrono::seconds SLEEP_TIME(30);
@@ -28,13 +28,13 @@ using namespace std;
 using namespace std::chrono;
 
 PriorityQueue urls_queue;
-// unordered_map<string, bool> visited_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
+unordered_map<string, bool> queued_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 ofstream logs, status_log, backup_queue, html_files[NUM_THREADS];
 ifstream reading_backup_queue;
 int index_file = 0, log_entrance = 0;
 string log_buffer;
 
-mutex urls_queue_mutex, visited_url_mutex, log_mutex, status_log_mutex, cout_mutex;
+mutex urls_queue_mutex, queued_url_mutex, log_mutex, status_log_mutex, cout_mutex;
 
 high_resolution_clock::time_point t0;
 
@@ -52,11 +52,6 @@ int main(){
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://www.globo.com"	};
 	vector<thread> ths;
-
-	// cout << getNormalizedUrl("http://www.gamevicio.com") << endl;
-
-	// exit(0);
-
 
 	logs.open("logs/log.csv", std::ofstream::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
@@ -77,12 +72,16 @@ int main(){
 	status_log << "Creating threads" << endl;
 
 	for (i = 0; i < NUM_THREADS; i++){
+		// Opening files
 		filename.append(HTML_FILENAME);
 		filename.append("-");
 		filename.append(to_string(i));
 		filename.append("-0");
-		// cout << filename << endl;
 		html_files[i].open(filename, ios::out | ios::app);
+		html_files[i] << "|||";
+		filename.clear();
+
+		// Creating threads
 		ths.push_back(thread(&crawling, i, buffer));
 		buffer.clear();
 	}
@@ -116,7 +115,7 @@ void crawling(int id, string buffer){
 
 	vector<string> local_queue, local_to_queue;
 
-	CkSpider *spider;
+	CkSpider spider;
 	CkString ckurl, domain, html;
 
 	high_resolution_clock::time_point t1, t2, tf;
@@ -175,30 +174,27 @@ void crawling(int id, string buffer){
 
 			ckurl = url.c_str();
 
-			spider = new CkSpider();
+			spider.GetUrlDomain(ckurl.getString(), domain);
 
-			spider->GetUrlDomain(ckurl.getString(), domain);
+			spider.Initialize(domain.getString());
 
-			spider->Initialize(domain.getString());
+			spider.AddUnspidered(ckurl.getString());
 
-			spider->AddUnspidered(ckurl.getString());
-
-			success = spider->CrawlNext();
+			success = spider.CrawlNext();
 
 			if (success) { 
 				// logging += "Evaluating " + url.getUrl() + "\n";
 				// logging = url.getUrl();
 
-				spider->get_LastHtml(html);
+				spider.get_LastHtml(html);
 
 				logging = html.getSizeUtf8();
 
-				buffer.append("||| ");
+				buffer.append(" ");
 				buffer.append(url);
 				buffer.append(" | ");
-				buffer.append(" |||");
 				buffer.append(html.getString());
-				buffer.append(" ");
+				buffer.append(" |||");
 
 				file_size+=buffer.size();
 
@@ -219,75 +215,81 @@ void crawling(int id, string buffer){
 					html_files[i].open(filename, ios::out | ios::app);
 				}
 
-				size_unspired = spider->get_NumUnspidered();
+				size_unspired = spider.get_NumUnspidered();
 
 				for (i = 0; i < size_unspired; i++){
-					spider->GetUnspideredUrl(0, ckurl);
+					spider.GetUnspideredUrl(0, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
-					spider->SkipUnspidered(0);
+					spider.SkipUnspidered(0);
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-						// visited_url_mutex.lock();
+						// queued_url_mutex.lock();
 						// cout_mutex.lock();
-						// cout << "visited_url" << " mutex locked" << endl;
+						// cout << "queued_url" << " mutex locked" << endl;
 						// cout_mutex.unlock();
-						// if (!visited_url[url]){
+						if (!queued_url[url]){
 							local_to_queue.push_back(url);
-							// visited_url[url] =  true;
-						// } 
+							// queued_url[url] =  true;
+						} 
 						// cout_mutex.lock();
-						// cout << "visited_url" << " mutex unlocked" << endl;
+						// cout << "queued_url" << " mutex unlocked" << endl;
 						// cout_mutex.unlock();
-						// visited_url_mutex.unlock();
+						// queued_url_mutex.unlock();
 					}
 				}
 
-				size_unspired = spider->get_NumOutboundLinks();
+				size_unspired = spider.get_NumOutboundLinks();
 
 				for (i = 0; i < size_unspired; i++){
-					spider->GetOutboundLink(i, ckurl);
+					spider.GetOutboundLink(i, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
-						// visited_url_mutex.lock();
+						// queued_url_mutex.lock();
 						// cout_mutex.lock();
-						// cout << "visited_url" << " mutex locked" << endl;
+						// cout << "queued_url" << " mutex locked" << endl;
 						// cout_mutex.unlock();
-						// if (!visited_url[url]){
+						if (!queued_url[url]){
 							local_to_queue.push_back(url);
-							// visited_url[url] =  true;
-						// }
+							// queued_url.erase(url);
+						}
 						// cout_mutex.lock();
-						// cout << "visited_url" << " mutex unlocked" << endl;
+						// cout << "queued_url" << " mutex unlocked" << endl;
 						// cout_mutex.unlock();
-						// visited_url_mutex.unlock();
+						// queued_url_mutex.unlock();
 					}
 				}
 
 				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
 					if (urls_queue.getSize() <= BACKUP_QUEUE_SIZE){
 						vector_size = local_to_queue.size();
+						queued_url_mutex.lock();
 						urls_queue_mutex.lock();
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex locked" << endl;
 						// cout_mutex.unlock();
 						for (i = 0; i < vector_size; i++){
-							urls_queue.queueURL(local_to_queue.back());
+							url = local_to_queue.back();
+							if(!queued_url[url]){
+								urls_queue.queueURL(url);
+								queued_url[url] = true;
+							}
 							local_to_queue.pop_back();
 						}
 						// cout_mutex.lock();
 						// cout << "urls_queue" << " mutex unlocked" << endl;
 						// cout_mutex.unlock();
 						urls_queue_mutex.unlock();
+						queued_url_mutex.unlock();
 					}
 					local_to_queue.clear();
 					local_to_queue.shrink_to_fit();
 				}
 
 
-				spider->ClearOutboundLinks();
+				spider.ClearOutboundLinks();
 
 				t2 = high_resolution_clock::now();
 
@@ -323,14 +325,14 @@ void crawling(int id, string buffer){
 			}
 		} else {
 			havent_slept = false;
+			cout << "Sleeping" << endl;
 			urls_queue_mutex.lock();
 			restoring_backup();
 			urls_queue_mutex.unlock();
 		}
 
-		spider->ClearSpideredUrls();
+		spider.ClearSpideredUrls();
 
-		free(spider);
 	}
 
 	status_log_mutex.lock();
@@ -364,12 +366,12 @@ string initializing_queue(vector<string> v){
 
 	for (i = 0; i < v.size(); i++){
 		urls_queue.queueURL(getNormalizedUrl(v[i]));
-		// visited_url[getNormalizedUrl(v[i])] = true;
+		// queued_url[getNormalizedUrl(v[i])] = true;
 	}
 
 	loop_control = 0;
 
-	while(loop_control < INITIAL_COLLECT){
+	while(loop_control < INITIAL_COLLECT && !urls_queue.empty()){
 	
 
 		t1 = high_resolution_clock::now();
@@ -391,12 +393,11 @@ string initializing_queue(vector<string> v){
 
 			logging = html.getSizeUtf8();
 
-			buffer.append("||| ");
+			buffer.append(" ");
 			buffer.append(url);
 			buffer.append(" | ");
-			buffer.append(" |||");
 			buffer.append(html.getString());
-			buffer.append(" ");
+			buffer.append(" |||");
 
 			// if (buffer.size() > LIMIT_HTML_FILE_SIZE){
 			// 	html_files.open(HTML_FILENAME+to_string(index_file));
@@ -415,10 +416,10 @@ string initializing_queue(vector<string> v){
 
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-					// if (!visited_url[url]){
+					if (!queued_url[url]){
 						urls_queue.queueURL(url);
-						// visited_url[url] =  true;
-					// }
+						queued_url[url] =  true;
+					}
 				}
 
 			}
@@ -431,10 +432,10 @@ string initializing_queue(vector<string> v){
 
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
-					// if (!visited_url[url]){
+					if (!queued_url[url]){
 						urls_queue.queueURL(url);
-						// visited_url[url] =  true;
-					// }
+						queued_url[url] =  true;
+					}
 				}
 
 			}
