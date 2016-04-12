@@ -50,17 +50,19 @@ int main(){
 	string buffer, filename;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://www.globo.com"	};
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia"	};
 	vector<thread> ths;
+
+	// cout << "here";
 
 	logs.open("logs/log.csv", std::ofstream::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
 	status_log.open("logs/status_log.txt", std::ofstream::out);
 
-	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
-	backup_queue.close();
-	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
+	// backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
+	// backup_queue.close();
+	// reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
 
 	// buffer.append("|||");
 
@@ -73,13 +75,13 @@ int main(){
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
-		filename.append(HTML_FILENAME);
-		filename.append("-");
-		filename.append(to_string(i));
-		filename.append("-0");
-		html_files[i].open(filename, ios::out | ios::app);
-		html_files[i] << "|||";
-		filename.clear();
+		// filename.append(HTML_FILENAME);
+		// filename.append("-");
+		// filename.append(to_string(i));
+		// filename.append("-0");
+		// html_files[i].open(filename, ios::out | ios::app);
+		// html_files[i] << "|||";
+		// filename.clear();
 
 		// Creating threads
 		ths.push_back(thread(&crawling, i, buffer));
@@ -190,30 +192,30 @@ void crawling(int id, string buffer){
 
 				logging = html.getSizeUtf8();
 
-				buffer.append(" ");
-				buffer.append(url);
-				buffer.append(" | ");
-				buffer.append(html.getString());
-				buffer.append(" |||");
+				// buffer.append(" ");
+				// buffer.append(url);
+				// buffer.append(" | ");
+				// buffer.append(html.getString());
+				// buffer.append(" |||");
 
-				file_size+=buffer.size();
+				// file_size+=buffer.size();
 
-				html_files[id] << buffer;
+				// html_files[id] << buffer;
 
-				buffer.clear();
-				buffer.shrink_to_fit();
+				// buffer.clear();
+				// buffer.shrink_to_fit();
 
-				if (file_size >= LIMIT_HTML_FILE_SIZE){
-					html_files[id].close();
-					file_size = 0;
-					file_index++;
-					filename.append(HTML_FILENAME);
-					filename.append("-");
-					filename.append(to_string(i));
-					filename.append("-");
-					filename.append(to_string(file_index));
-					html_files[i].open(filename, ios::out | ios::app);
-				}
+				// if (file_size >= LIMIT_HTML_FILE_SIZE){
+				// 	html_files[id].close();
+				// 	file_size = 0;
+				// 	file_index++;
+				// 	filename.append(HTML_FILENAME);
+				// 	filename.append("-");
+				// 	filename.append(to_string(i));
+				// 	filename.append("-");
+				// 	filename.append(to_string(file_index));
+				// 	html_files[i].open(filename, ios::out | ios::app);
+				// }
 
 				size_unspired = spider.get_NumUnspidered();
 
@@ -366,6 +368,7 @@ string initializing_queue(vector<string> v){
 
 	for (i = 0; i < v.size(); i++){
 		urls_queue.queueURL(getNormalizedUrl(v[i]));
+		// cout << getNormalizedUrl(v[i]) << endl;
 		// queued_url[getNormalizedUrl(v[i])] = true;
 	}
 
@@ -377,6 +380,8 @@ string initializing_queue(vector<string> v){
 		t1 = high_resolution_clock::now();
 
 		url = urls_queue.dequeueURL();
+
+		cout << url << endl;
 
 		ckurl = url.c_str();
 
@@ -393,11 +398,11 @@ string initializing_queue(vector<string> v){
 
 			logging = html.getSizeUtf8();
 
-			buffer.append(" ");
-			buffer.append(url);
-			buffer.append(" | ");
-			buffer.append(html.getString());
-			buffer.append(" |||");
+			// buffer.append(" ");
+			// buffer.append(url);
+			// buffer.append(" | ");
+			// buffer.append(html.getString());
+			// buffer.append(" |||");
 
 			// if (buffer.size() > LIMIT_HTML_FILE_SIZE){
 			// 	html_files.open(HTML_FILENAME+to_string(index_file));

@@ -87,7 +87,7 @@ int getURLsize(string url){
 			tokens.erase(tokens.cbegin()+i);
 		} else {
 			++it;
-			i++;	
+			i++;
 		}
 	}
 
@@ -103,6 +103,7 @@ int getURLsize(string url){
 	}
 
 	it = begin(tokens);
+	i = 0;
 	while(it != end(tokens)){
 		if (tokens[i].size() <= 0){
 			tokens.erase(tokens.cbegin()+i);
