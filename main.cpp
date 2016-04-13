@@ -218,9 +218,9 @@ void crawling(int id, string buffer){
 
 					tf = high_resolution_clock::now();
 
-					duration = duration_cast<milliseconds>( tf - t0 ).count();
+					duration = duration_cast<seconds>( tf - t0 ).count();
 
-					cout << "Thread " << id << " is having its politeness sleep. (" << duration << ")" << endl;
+					status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
 					status_log_mutex.unlock();
 
 					this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
