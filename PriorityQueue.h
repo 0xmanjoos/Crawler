@@ -1,6 +1,7 @@
 #ifndef PRIORITYQUEUE_H
 #define PRIORITYQUEUE_H
 
+#include <algorithm>
 #include "Url.h"
 
 using namespace std;
@@ -23,5 +24,24 @@ template <class T, class S, class C>
         };
     return HackedQueue::Container(q);
 }
+
+class PriorityQueue{
+
+private:
+	vector<string> list;
+
+public:
+	PriorityQueue();
+	~PriorityQueue();
+	void push(string url);
+	string pop();
+
+	int size();
+	bool empty();
+	
+	string getFromVector(int i);
+	void clear();
+
+};
 
 #endif

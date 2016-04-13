@@ -8,11 +8,11 @@
 
 #define POLITENESS_TIME 30.0 // seconds
 
-#define NUM_THREADS 40
+#define NUM_THREADS 20
 #define LIMIT_SIZE_URL 6
 #define INITIAL_COLLECT 20
 
-#define THREAD_QUEUE_SIZE 50
+#define THREAD_QUEUE_SIZE 20
 #define SIZE_LOCAL_QUEUE 500
 
 #define HTML_FILENAME "htmls/html_files"
@@ -20,8 +20,8 @@
 
 #define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 20000
-#define KEEPING_FROM_BACKUP 5000
+#define BACKUP_QUEUE_SIZE 10000
+#define KEEPING_FROM_BACKUP 2000
 #define MIN_TO_KEEP_IN_QUEUE 100
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
@@ -32,7 +32,8 @@ const std::chrono::minutes BACKUP_SLEEP_TIME(1);
 using namespace std;
 using namespace std::chrono;
 
-priority_queue<string, std::vector<string>, CompareURL> urls_queue;
+// priority_queue<string, std::vector<string>, CompareURL> urls_queue;
+PriorityQueue urls_queue;
 unordered_map<string, bool> queued_url;
 unordered_map<string, high_resolution_clock::time_point> last_access;
 ofstream logs, status_log, backup_queue, html_files[NUM_THREADS];
@@ -148,8 +149,8 @@ void crawling(int id, string buffer){
 	urls_queue_mutex.lock();
 	dequeue_size = (urls_queue.size() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
 	for (i=0; i<dequeue_size; i++){
-		local_queue.push_back(urls_queue.top());
-		urls_queue.pop();
+		local_queue.push_back(urls_queue.pop());
+		// urls_queue.pop();
 	}
 	urls_queue_mutex.unlock();
 
@@ -170,8 +171,8 @@ void crawling(int id, string buffer){
 				urls_queue_mutex.lock();
 				dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
 				for (i = 0; i < dequeue_size; i++){
-					local_queue.push_back(urls_queue.top());
-					urls_queue.pop();
+					local_queue.push_back(urls_queue.pop());
+					// urls_queue.pop();
 				}
 				urls_queue_mutex.unlock();
 
@@ -379,9 +380,9 @@ void crawling(int id, string buffer){
 
 			tf = high_resolution_clock::now();
 
-			duration = duration_cast<milliseconds>( tf - t0 ).count();
+			duration = duration_cast<seconds>( tf - t0 ).count();
 
-			cout << "Thread " << id << " is sleeping. (" << duration << ")" << endl;
+			status_log << "Thread " << id << " is sleeping. (" << duration << " s)" << endl;
 			status_log_mutex.unlock();
 			// urls_queue_mutex.lock();
 			// restoring_backup();
@@ -435,8 +436,8 @@ string initializing_queue(vector<string> v){
 
 		t1 = high_resolution_clock::now();
 
-		url = urls_queue.top();
-		urls_queue.pop();
+		url = urls_queue.pop();
+		// urls_queue.pop();
 
 		ckurl = url.c_str();
 
@@ -513,6 +514,7 @@ void backingup_queue(){
 	unsigned int i, size_to_keep;
 	double total_duration;
 	vector<string> backup;
+	string url;
 
 	high_resolution_clock::time_point t1, t2;
 
@@ -532,35 +534,46 @@ void backingup_queue(){
 
 			// queue_size = urls_queue.size();
 
-			vector<string> &queue = Container(urls_queue);
+			// vector<string> &queue = Container(urls_queue);
 
 			// cout << queue.size() << " " << urls_queue.size() << endl;
 
 			size_to_keep = (urls_queue.size() >= KEEPING_FROM_BACKUP) ? KEEPING_FROM_BACKUP : urls_queue.size();
-
+			cout << "Backing up urls" << endl;
 			for (i = 0; i < size_to_keep; i++){
-				backup.push_back(queue.front());
+				backup.push_back(urls_queue.getFromVector(i));
 				// v.push_back(urls_queue.top());
 				// urls_queue.pop();
-				queue.erase(queue.cbegin());
+				// queue.erase(queue.cbegin());
 			}
+			cout << "Done backing up" << endl;
 
 			// cout << queue.size() << " " << urls_queue.size() << endl;
-
-			while (!queue.empty()){
+			queued_url_mutex.lock();
+			cout << "Saving urls to file" << endl;
+			for (; i < urls_queue.size(); i++){
+			// while (!queue.empty()){
 			// while (urls_queue.size() > 0){
-				backup_queue << queue.front() << endl;
+				url = urls_queue.getFromVector(i);
+				backup_queue << url << endl;
+				queued_url[url] = false;
 				// backup_queue << urls_queue.top() << endl;
 				// urls_queue.pop();
-				queue.erase(queue.cbegin());
+				// queue.erase(queue.cbegin());
 			}
+			cout << "Done saving" << endl;
 
-			queue.clear();
+			// queue.clear();
 			// queue.shrink_to_fit();
 
-			queued_url_mutex.lock();
+			cout << "Cleaning heap" << endl;
+			urls_queue.clear();
+			cout << "Done cleaning" << endl;
 
-			queued_url.clear();
+			// cout << "Cleaning hash" << endl;
+			// queued_url.clear();
+			// queued_url = unordered_map<string, bool>();
+			// cout << "Done cleaning" << endl;
 			// queued_url.reserve(backup.size());
 
 			// cout << &urls_queue << " ";
@@ -569,10 +582,12 @@ void backingup_queue(){
 
 			// cout << &urls_queue << endl;
 
+			cout << "Restoring URLs" << endl;
 			for (i = 0; i < backup.size(); i++){
 				urls_queue.push(backup[i]);
 				queued_url[backup[i]] = true;
 			}
+			cout << "Done restoring" << endl;
 
 			queued_url_mutex.unlock();
 
