@@ -64,7 +64,7 @@ int main(){
 	// backup_queue.close();
 	// reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
 
-	// buffer.append("|||");
+	buffer.append("|||");
 
 	t0 = high_resolution_clock::now();
 
@@ -201,30 +201,30 @@ void crawling(int id, string buffer){
 
 				logging = html.getSizeUtf8();
 
-				// buffer.append(" ");
-				// buffer.append(url);
-				// buffer.append(" | ");
-				// buffer.append(html.getString());
-				// buffer.append(" |||");
+				buffer.append(" ");
+				buffer.append(url);
+				buffer.append(" | ");
+				buffer.append(html.getString());
+				buffer.append(" |||");
 
-				// file_size+=buffer.size();
+				file_size+=buffer.size();
 
-				// html_files[id] << buffer;
+				html_files[id] << buffer;
 
-				// buffer.clear();
-				// buffer.shrink_to_fit();
+				buffer.clear();
+				buffer.shrink_to_fit();
 
-				// if (file_size >= LIMIT_HTML_FILE_SIZE){
-				// 	html_files[id].close();
-				// 	file_size = 0;
-				// 	file_index++;
-				// 	filename.append(HTML_FILENAME);
-				// 	filename.append("-");
-				// 	filename.append(to_string(i));
-				// 	filename.append("-");
-				// 	filename.append(to_string(file_index));
-				// 	html_files[i].open(filename, ios::out | ios::app);
-				// }
+				if (file_size >= LIMIT_HTML_FILE_SIZE){
+					html_files[id].close();
+					file_size = 0;
+					file_index++;
+					filename.append(HTML_FILENAME);
+					filename.append("-");
+					filename.append(to_string(i));
+					filename.append("-");
+					filename.append(to_string(file_index));
+					html_files[i].open(filename, ios::out | ios::app);
+				}
 
 				size_unspired = spider.get_NumUnspidered();
 
@@ -405,19 +405,11 @@ string initializing_queue(vector<string> v){
 
 			logging = html.getSizeUtf8();
 
-			// buffer.append(" ");
-			// buffer.append(url);
-			// buffer.append(" | ");
-			// buffer.append(html.getString());
-			// buffer.append(" |||");
-
-			// if (buffer.size() > LIMIT_HTML_FILE_SIZE){
-			// 	html_files.open(HTML_FILENAME+to_string(index_file));
-			// 	html_files << buffer;
-			// 	html_files.close();
-			// 	buffer.clear();
-			// 	index_file++;
-			// }
+			buffer.append(" ");
+			buffer.append(url);
+			buffer.append(" | ");
+			buffer.append(html.getString());
+			buffer.append(" |||");
 
 			size_unspired = spider.get_NumUnspidered();
 			for (i = 0; i < size_unspired; i++){
