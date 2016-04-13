@@ -18,16 +18,17 @@
 
 #define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 50000
-#define KEEPING_FROM_BACKUP 5000
+#define BACKUP_QUEUE_SIZE 5000
+#define KEEPING_FROM_BACKUP 1000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 const std::chrono::seconds SLEEP_TIME(30);
+const std::chrono::minutes BACKUP_SLEEP_TIME(1);
 
 using namespace std;
 using namespace std::chrono;
 
-PriorityQueue urls_queue;
+priority_queue<string, std::vector<string>, CompareURL> urls_queue;
 unordered_map<string, bool> queued_url; // Better off the PriotyQueue, because using threads, there will be less links to be "tested" in the queue
 ofstream logs, status_log, backup_queue, html_files[NUM_THREADS];
 ifstream reading_backup_queue;
@@ -52,6 +53,7 @@ int main(){
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com"	};
 	vector<thread> ths;
+	thread backup(backingup_queue), restore;
 
 	// cout << "here";
 
@@ -70,8 +72,10 @@ int main(){
 
 	buffer = initializing_queue(initial_url);
 
-	status_log << "Initial queue size: " << urls_queue.getSize() << endl;
+	status_log << "Initial queue size: " << urls_queue.size() << endl;
 	status_log << "Creating threads" << endl;
+
+	// backup.detach();
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
@@ -133,9 +137,10 @@ void crawling(int id, string buffer){
 
 	// Initializing local queue
 	urls_queue_mutex.lock();
-	dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
+	dequeue_size = (urls_queue.size() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
 	for (i=0; i<dequeue_size; i++){
-		local_queue.push_back(urls_queue.dequeueURL());
+		local_queue.push_back(urls_queue.top());
+		urls_queue.pop();
 	}
 	urls_queue_mutex.unlock();
 
@@ -144,7 +149,7 @@ void crawling(int id, string buffer){
 	t2 = high_resolution_clock::now();
 
 	total_duration = duration_cast<seconds>( t2 - t0 ).count();
-	status_log << "Queue size: " << urls_queue.getSize() << " (" << total_duration << " s)" << endl;
+	status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
 	status_log_mutex.unlock();
 
 	while (!urls_queue.empty() || !local_queue.empty() || havent_slept ){
@@ -154,9 +159,10 @@ void crawling(int id, string buffer){
 			if (local_queue.empty()){
 				local_queue.shrink_to_fit();
 				urls_queue_mutex.lock();
-				dequeue_size = (urls_queue.getSize() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.getSize(); 
+				dequeue_size = (urls_queue.size() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
 				for (i = 0; i < dequeue_size; i++){
-					local_queue.push_back(urls_queue.dequeueURL());
+					local_queue.push_back(urls_queue.top());
+					urls_queue.pop();
 				}
 				urls_queue_mutex.unlock();
 
@@ -165,12 +171,12 @@ void crawling(int id, string buffer){
 				t2 = high_resolution_clock::now();
 
 				total_duration = duration_cast<seconds>( t2 - t0 ).count();
-				status_log << "Queue size: " << urls_queue.getSize() << " (" << total_duration << " s)" << endl;
+				status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
 				status_log_mutex.unlock();
 			}
 
 			// urls_queue_mutex.lock();
-			// if (urls_queue.getSize() >= BACKUP_QUEUE_SIZE){
+			// if (urls_queue.size() >= BACKUP_QUEUE_SIZE){
 			// 	backingup_queue();
 			// }
 			// urls_queue_mutex.unlock();
@@ -178,7 +184,8 @@ void crawling(int id, string buffer){
 			t1 = high_resolution_clock::now();
 
 			// urls_queue_mutex.lock();
-			// url = urls_queue.dequeueURL();
+			// url = urls_queue.top();
+			// urls_queue.pop();
 			url = local_queue[0];
 			local_queue.erase(local_queue.begin());
 			// urls_queue_mutex.unlock();
@@ -274,27 +281,32 @@ void crawling(int id, string buffer){
 				}
 
 				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.empty()){
-					if (urls_queue.getSize() <= BACKUP_QUEUE_SIZE){
-						vector_size = local_to_queue.size();
-						queued_url_mutex.lock();
-						urls_queue_mutex.lock();
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex locked" << endl;
-						// cout_mutex.unlock();
-						for (i = 0; i < vector_size; i++){
-							url = local_to_queue.back();
-							if(!queued_url[url]){
-								urls_queue.queueURL(url);
-								queued_url[url] = true;
-							}
-							local_to_queue.pop_back();
+					// if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
+					vector_size = local_to_queue.size();
+
+					urls_queue_mutex.lock();
+					queued_url_mutex.lock();
+
+					// status_log_mutex.lock();
+					// status_log << "Filling Queue" << endl;
+					// status_log_mutex.unlock();
+
+					for (i = 0; i < vector_size; i++){
+						url = local_to_queue.back();
+						if(!queued_url[url]){
+							urls_queue.push(url);
+							queued_url[url] = true;
 						}
-						// cout_mutex.lock();
-						// cout << "urls_queue" << " mutex unlocked" << endl;
-						// cout_mutex.unlock();
-						urls_queue_mutex.unlock();
-						queued_url_mutex.unlock();
+						local_to_queue.pop_back();
 					}
+
+					// status_log_mutex.lock();
+					// status_log << "Done filling queue" << endl;
+					// status_log_mutex.unlock();
+
+					queued_url_mutex.unlock();
+					urls_queue_mutex.unlock();
+
 					local_to_queue.clear();
 					local_to_queue.shrink_to_fit();
 				}
@@ -337,9 +349,9 @@ void crawling(int id, string buffer){
 		} else {
 			havent_slept = false;
 			cout << "Sleeping" << endl;
-			urls_queue_mutex.lock();
-			restoring_backup();
-			urls_queue_mutex.unlock();
+			// urls_queue_mutex.lock();
+			// restoring_backup();
+			// urls_queue_mutex.unlock();
 		}
 
 		spider.ClearSpideredUrls();
@@ -376,7 +388,7 @@ string initializing_queue(vector<string> v){
 	high_resolution_clock::time_point t1, t2;
 
 	for (i = 0; i < v.size(); i++){
-		urls_queue.queueURL(getNormalizedUrl(v[i]));
+		urls_queue.push(getNormalizedUrl(v[i]));
 		// cout << getNormalizedUrl(v[i]) << endl;
 		// queued_url[getNormalizedUrl(v[i])] = true;
 	}
@@ -388,7 +400,8 @@ string initializing_queue(vector<string> v){
 
 		t1 = high_resolution_clock::now();
 
-		url = urls_queue.dequeueURL();
+		url = urls_queue.top();
+		urls_queue.pop();
 
 		ckurl = url.c_str();
 
@@ -421,7 +434,7 @@ string initializing_queue(vector<string> v){
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
 					if (!queued_url[url]){
-						urls_queue.queueURL(url);
+						urls_queue.push(url);
 						queued_url[url] =  true;
 					}
 				}
@@ -437,7 +450,7 @@ string initializing_queue(vector<string> v){
 				url_size = getURLsize(url);
 				if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
 					if (!queued_url[url]){
-						urls_queue.queueURL(url);
+						urls_queue.push(url);
 						queued_url[url] =  true;
 					}
 				}
@@ -462,44 +475,69 @@ string initializing_queue(vector<string> v){
 }
 
 void backingup_queue(){
-	int i;
+	unsigned int i;
 	double total_duration;
 	vector<string> v;
 
 	high_resolution_clock::time_point t1, t2;
 
-	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out | ios::app);
+	while(true){
+		if (urls_queue.size() >= BACKUP_QUEUE_SIZE){
 
-	status_log_mutex.lock();
-	t1 = high_resolution_clock::now();
+			backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out | ios::app);
 
-	total_duration = duration_cast<seconds>( t1 - t0 ).count();
-	status_log << endl << "Backing up queue (" << total_duration << " s)" << endl;
-	status_log_mutex.unlock();
+			status_log_mutex.lock();
+			t1 = high_resolution_clock::now();
 
-	for (i = 0; i < KEEPING_FROM_BACKUP; i++){
-		v.push_back(urls_queue.dequeueURL());
+			total_duration = duration_cast<seconds>( t1 - t0 ).count();
+			status_log << endl << "Backing up queue (" << total_duration << " s)" << endl;
+			status_log_mutex.unlock();
+
+			urls_queue_mutex.lock();
+
+			vector<string> &queue = Container(urls_queue);
+
+			urls_queue = priority_queue<string, std::vector<string>, CompareURL>();
+
+			for (i = 0; i < KEEPING_FROM_BACKUP; i++){
+				v.push_back(queue[i]);
+				queue.erase(queue.cbegin()+i);
+			}
+
+			while (queue.size() > 0){
+				backup_queue << queue.front() << endl;
+				queue.erase(queue.cbegin());
+			}
+
+			queued_url_mutex.lock();
+
+			queued_url.clear();
+			queued_url.reserve(KEEPING_FROM_BACKUP);
+
+			for (i = 0; i < v.size(); i++){
+				urls_queue.push(queue[i]);
+				queued_url[queue[i]] = true;
+			}
+
+			queued_url_mutex.unlock();
+			urls_queue_mutex.unlock();
+
+			queue.clear();
+			queue.shrink_to_fit();
+
+			status_log_mutex.lock();
+			t2 = high_resolution_clock::now();
+
+			total_duration = duration_cast<seconds>( t2 - t1 ).count();
+			status_log << "Done backing up queue (total duration: " << total_duration << " s)" << endl << endl;
+			status_log_mutex.unlock();
+
+			backup_queue.close();
+		}
+
+		this_thread::sleep_for(BACKUP_SLEEP_TIME);
+
 	}
-	while(urls_queue.getSize() > 0){
-		// output.append(urls_queue.dequeueURL());
-		// output.append("\n");
-		backup_queue << urls_queue.dequeueURL() << endl;
-	}
-	for (i = 0; i < v.size(); i++){
-		urls_queue.queueURL(v[i]);
-	}
-
-	v.clear();
-	v.shrink_to_fit();
-
-	status_log_mutex.lock();
-	t2 = high_resolution_clock::now();
-
-	total_duration = duration_cast<seconds>( t2 - t1 ).count();
-	status_log << "Done backing up queue (" << total_duration << " s)" << endl << endl;
-	status_log_mutex.unlock();
-
-	backup_queue.close();
 }
 
 void restoring_backup(){
@@ -515,8 +553,8 @@ void restoring_backup(){
 	status_log << endl << "Restoring queue (" << total_duration << " s)" << endl;
 	status_log_mutex.unlock();
 
-	while(getline(reading_backup_queue,url) && i < KEEPING_FROM_BACKUP && urls_queue.getSize() < BACKUP_QUEUE_SIZE){
-		urls_queue.queueURL(url);
+	while(getline(reading_backup_queue,url) && i < KEEPING_FROM_BACKUP && urls_queue.size() < BACKUP_QUEUE_SIZE){
+		urls_queue.push(url);
 		i++;
 	}
 
