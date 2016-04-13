@@ -5,12 +5,15 @@
 
 using namespace std;
 
+// Compare function used in the priority_queue to make a min heap
 struct CompareURL {
 	bool operator()(const string& url1, const string& url2) {
 		return getURLsize(url1) > getURLsize(url2);
 	}
 };
 
+// Allowing access to priority_queue container (ref: http://stackoverflow.com/a/1385520)
+// It makes backing up queue faster
 template <class T, class S, class C>
     S& Container(priority_queue<T, S, C>& q) {
         struct HackedQueue : private priority_queue<T, S, C> {
@@ -20,31 +23,5 @@ template <class T, class S, class C>
         };
     return HackedQueue::Container(q);
 }
-
-
-class PriorityQueue {
-
-private:
-
-	priority_queue<string, std::vector<string>, CompareURL> list;
-	
-public:
-	// Constructors
-	PriorityQueue();
-
-	// Destructor
-	~PriorityQueue();
-
-	// Setters
-	void queueURL(string url);
-
-	// Getters
-	string dequeueURL();
-	int getSize();
-	string backingUp();
-
-	bool empty();
-
-};
 
 #endif
