@@ -8,20 +8,20 @@
 
 #define POLITENESS_TIME 30.0 // seconds
 
-#define NUM_THREADS 20
+#define NUM_THREADS 40
 #define LIMIT_SIZE_URL 6
 #define INITIAL_COLLECT 20
 
-#define THREAD_QUEUE_SIZE 20
-#define SIZE_LOCAL_QUEUE 100
+#define THREAD_QUEUE_SIZE 50
+#define SIZE_LOCAL_QUEUE 500
 
 #define HTML_FILENAME "htmls/html_files"
 #define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
 
 #define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 5000
-#define KEEPING_FROM_BACKUP 1000
+#define BACKUP_QUEUE_SIZE 20000
+#define KEEPING_FROM_BACKUP 5000
 #define MIN_TO_KEEP_IN_QUEUE 100
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
@@ -141,7 +141,7 @@ void crawling(int id, string buffer){
 	filename.append("-");
 	filename.append(to_string(id));
 	filename.append("-0");
-	html_files[i].open(filename, ios::out | ios::app);
+	html_files[id].open(filename, ios::out | ios::app);
 	filename.clear();
 
 	// Initializing local queue
@@ -168,7 +168,7 @@ void crawling(int id, string buffer){
 			if (local_queue.empty()){
 				local_queue.shrink_to_fit();
 				urls_queue_mutex.lock();
-				dequeue_size = (urls_queue.size() > THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
+				dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
 				for (i = 0; i < dequeue_size; i++){
 					local_queue.push_back(urls_queue.top());
 					urls_queue.pop();
@@ -184,17 +184,8 @@ void crawling(int id, string buffer){
 				status_log_mutex.unlock();
 			}
 
-			// urls_queue_mutex.lock();
-			// if (urls_queue.size() >= BACKUP_QUEUE_SIZE){
-			// 	backingup_queue();
-			// }
-			// urls_queue_mutex.unlock();
-
 			t1 = high_resolution_clock::now();
 
-			// urls_queue_mutex.lock();
-			// url = urls_queue.top();
-			// urls_queue.pop();
 			url = local_queue[0];
 			local_queue.erase(local_queue.cbegin());
 			// urls_queue_mutex.unlock();
@@ -225,7 +216,6 @@ void crawling(int id, string buffer){
 
 					this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
 				}
-
 			} else {
 				last_access[domain.getString()] = t2;
 			}
@@ -236,7 +226,7 @@ void crawling(int id, string buffer){
 
 			success = spider.CrawlNext();
 
-			if (success) { 
+			if (spider.get_NumFailed() <= 0) { 
 				spider.get_LastHtml(html);
 
 				logging = html.getSizeUtf8();
@@ -260,10 +250,11 @@ void crawling(int id, string buffer){
 					file_index++;
 					filename.append(HTML_FILENAME);
 					filename.append("-");
-					filename.append(to_string(i));
+					filename.append(to_string(id));
 					filename.append("-");
 					filename.append(to_string(file_index));
 					html_files[id].open(filename, ios::out | ios::app);
+					buffer.append("|||");
 				}
 
 				size_unspired = spider.get_NumUnspidered();
@@ -379,6 +370,9 @@ void crawling(int id, string buffer){
 				// cout_mutex.unlock();
 				log_mutex.unlock();
 			}
+
+			spider.ClearFailedUrls();
+
 		} else {
 			havent_slept = false;
 			status_log_mutex.lock();
@@ -562,7 +556,7 @@ void backingup_queue(){
 			}
 
 			queue.clear();
-			queue.shrink_to_fit();
+			// queue.shrink_to_fit();
 
 			queued_url_mutex.lock();
 
