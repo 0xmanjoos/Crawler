@@ -24,8 +24,8 @@
 
 #define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 150000
-#define KEEPING_FROM_BACKUP 10000
+#define BACKUP_QUEUE_SIZE 200000
+#define KEEPING_FROM_BACKUP 30000
 #define MIN_TO_KEEP_IN_QUEUE 200
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
@@ -366,11 +366,11 @@ void crawling(int id, string buffer){
 					// cout << "log" << " mutex unlocked" << endl;
 					// cout_mutex.unlock();
 					log_mutex.unlock();
-				} else {
-					status_log_mutex.lock();
-					status_log << "Failed to load " << url << endl;
-					status_log_mutex.unlock();
-				}
+				} // else {
+				// 	status_log_mutex.lock();
+				// 	status_log << "Failed to load " << url << endl;
+				// 	status_log_mutex.unlock();
+				// }
 
 				// spider.ClearFailedUrls();
 			} else {
@@ -515,9 +515,9 @@ string initializing_queue(vector<string> v){
 			total_duration = duration_cast<seconds>( t2 - t0 ).count();
 
 			logs << to_string(total_duration) << "," << to_string(duration) << "," << logging << endl;
-		} else {
-			status_log << "Failed to load " << url << endl;
-		}
+		} // else {
+			// status_log << "Failed to load " << url << endl;
+		// }
 
 		loop_control++;
 	}
