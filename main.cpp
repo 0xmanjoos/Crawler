@@ -248,7 +248,7 @@ void crawling(int id){
 				if (logging <= 0){
 					status_log_mutex.lock();
 
-					status_log << "Unable to download " << url << " " << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks(); << endl;
+					status_log << "Unable to download " << url << " " << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks() << endl;
 
 					status_log_mutex.unlock();
 				}
