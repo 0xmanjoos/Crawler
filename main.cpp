@@ -66,8 +66,8 @@ int main(){
 
 	// cout << "here";
 
-	for (i = 0; i < v.size(); i++){
-		urls_queue.push(getNormalizedUrl(v[i]));
+	for (i = 0; i < initial_url.size(); i++){
+		urls_queue.push(getNormalizedUrl(initial_url[i]));
 	}
 
 	logs.open(LOG_FILENAME, ios::out);
