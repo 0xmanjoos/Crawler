@@ -124,6 +124,8 @@ int getURLsize(string url){
 string getNormalizedUrl(string url){
 	string delimitation ("www.");
 
+	return url;
+
 	url = canonicalizeUrl(url);
 
 	// return url;
