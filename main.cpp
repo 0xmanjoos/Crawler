@@ -15,6 +15,10 @@
 #define THREAD_QUEUE_SIZE 20
 #define SIZE_LOCAL_QUEUE 500
 
+#define LOG_FILENAME "logs/log.csv"
+#define STATUS_LOG_FILENAME "logs/status_log.txt"
+
+
 #define HTML_FILENAME "htmls/html_files"
 #define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
 
@@ -63,10 +67,10 @@ int main(){
 
 	// cout << "here";
 
-	logs.open("logs/log.csv", std::ofstream::out);
+	logs.open(LOG_FILENAME, std::ofstream::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
-	status_log.open("logs/status_log.txt", std::ofstream::out);
+	status_log.open(STATUS_LOG_FILENAME, std::ofstream::out);
 
 	backup_queue.open(BACKUP_QUEUE_FILENAME, ios::out);
 	backup_queue.close();
@@ -539,18 +543,18 @@ void backingup_queue(){
 			// cout << queue.size() << " " << urls_queue.size() << endl;
 
 			size_to_keep = (urls_queue.size() >= KEEPING_FROM_BACKUP) ? KEEPING_FROM_BACKUP : urls_queue.size();
-			cout << "Backing up urls" << endl;
+			// cout << "Backing up urls" << endl;
 			for (i = 0; i < size_to_keep; i++){
 				backup.push_back(urls_queue.getFromVector(i));
 				// v.push_back(urls_queue.top());
 				// urls_queue.pop();
 				// queue.erase(queue.cbegin());
 			}
-			cout << "Done backing up" << endl;
+			// cout << "Done backing up" << endl;
 
 			// cout << queue.size() << " " << urls_queue.size() << endl;
 			queued_url_mutex.lock();
-			cout << "Saving urls to file" << endl;
+			// cout << "Saving urls to file" << endl;
 			for (; i < urls_queue.size(); i++){
 			// while (!queue.empty()){
 			// while (urls_queue.size() > 0){
@@ -561,14 +565,14 @@ void backingup_queue(){
 				// urls_queue.pop();
 				// queue.erase(queue.cbegin());
 			}
-			cout << "Done saving" << endl;
+			// cout << "Done saving" << endl;
 
 			// queue.clear();
 			// queue.shrink_to_fit();
 
-			cout << "Cleaning heap" << endl;
+			// cout << "Cleaning heap" << endl;
 			urls_queue.clear();
-			cout << "Done cleaning" << endl;
+			// cout << "Done cleaning" << endl;
 
 			// cout << "Cleaning hash" << endl;
 			// queued_url.clear();
@@ -582,12 +586,12 @@ void backingup_queue(){
 
 			// cout << &urls_queue << endl;
 
-			cout << "Restoring URLs" << endl;
+			// cout << "Restoring URLs" << endl;
 			for (i = 0; i < backup.size(); i++){
 				urls_queue.push(backup[i]);
 				queued_url[backup[i]] = true;
 			}
-			cout << "Done restoring" << endl;
+			// cout << "Done restoring" << endl;
 
 			queued_url_mutex.unlock();
 
@@ -598,7 +602,7 @@ void backingup_queue(){
 			t2 = high_resolution_clock::now();
 
 			total_duration = duration_cast<seconds>( t2 - t1 ).count();
-			status_log << "Done backing up queue (total duration: " << total_duration << " s)" << endl << endl;
+			// status_log << "Done backing up queue (total duration: " << total_duration << " s)" << endl << endl;
 			status_log_mutex.unlock();
 
 			backup_queue.close();
