@@ -13,7 +13,7 @@
 #define INITIAL_COLLECT 20
 
 #define THREAD_QUEUE_SIZE 20
-#define SIZE_LOCAL_QUEUE 500
+#define SIZE_LOCAL_QUEUE 1000
 
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
@@ -24,14 +24,14 @@
 
 #define LIMIT_MEM_LOG 1000
 
-#define BACKUP_QUEUE_SIZE 10000
-#define KEEPING_FROM_BACKUP 2000
+#define BACKUP_QUEUE_SIZE 100000
+#define KEEPING_FROM_BACKUP 10000
 #define MIN_TO_KEEP_IN_QUEUE 100
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
-const std::chrono::seconds SLEEP_TIME(30);
+const std::chrono::seconds SLEEP_TIME(10);
 const std::chrono::seconds POLITENESS_SLEEP_TIME(30);
-const std::chrono::minutes BACKUP_SLEEP_TIME(1);
+const std::chrono::minutes BACKUP_SLEEP_TIME(5);
 
 using namespace std;
 using namespace std::chrono;
@@ -136,7 +136,7 @@ void crawling(int id, string buffer){
 	vector<string> local_queue, local_to_queue;
 
 	CkSpider spider;
-	CkString ckurl, domain, html;
+	CkString ckurl, domain, html, last_domain;
 
 	high_resolution_clock::time_point t1, t2, tf, tla;
 
@@ -225,7 +225,11 @@ void crawling(int id, string buffer){
 				last_access[domain.getString()] = t2;
 			}
 
-			spider.Initialize(domain.getString());
+			if (!last_domain.compareStr(domain)){
+				spider.Initialize(domain.getString());
+			}
+
+			last_domain = domain;
 
 			spider.AddUnspidered(ckurl.getString());
 
@@ -245,6 +249,10 @@ void crawling(int id, string buffer){
 				file_size+=buffer.size();
 
 				html_files[id] << buffer;
+
+				if (html.getSizeUtf8() <= 0){
+					cout << url << endl;
+				}
 
 				buffer.clear();
 				buffer.shrink_to_fit();
