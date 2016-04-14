@@ -126,7 +126,7 @@ string getNormalizedUrl(string url){
 
 	// return url;
 
-	url = canonicalizeUrl(url);
+	// url = canonicalizeUrl(url);
 
 	// return url;
 
