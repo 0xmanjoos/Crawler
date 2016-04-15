@@ -202,9 +202,9 @@ void crawling(int id){
 
 			t2 = high_resolution_clock::now();
 
-			last_access_mutex.lock();
 			out = last_access.find(domain.getString());
 			if (out != last_access.end()){
+				last_access_mutex.lock();
 				tla = last_access[domain.getString()];
 
 				total_duration = duration_cast<seconds>(t2 - t0).count();
@@ -219,11 +219,16 @@ void crawling(int id){
 
 					status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
 					status_log_mutex.unlock();
+					last_access[domain.getString()] = t2;
+					last_access_mutex.unlock();
 
 					this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
+				} else {
+					last_access_mutex.unlock();
 				}
 			}
 
+			last_access_mutex.lock();
 			last_access[domain.getString()] = t2;
 			last_access_mutex.unlock();
 
