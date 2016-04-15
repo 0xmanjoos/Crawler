@@ -9,7 +9,7 @@
 #define POLITENESS_TIME 30.0 // seconds
 
 #define NUM_THREADS 100
-#define LIMIT_SIZE_URL 20
+#define LIMIT_SIZE_URL 8
 
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
