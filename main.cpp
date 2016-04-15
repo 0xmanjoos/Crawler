@@ -11,8 +11,7 @@
 #define NUM_THREADS 100
 #define LIMIT_SIZE_URL 20
 
-#define THREAD_QUEUE_SIZE 20
-#define SIZE_LOCAL_QUEUE 1
+#define THREAD_QUEUE_SIZE 100
 
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
@@ -28,7 +27,7 @@
 #define MIN_TO_KEEP_IN_QUEUE 3000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
-const std::chrono::seconds SLEEP_TIME(10);
+const std::chrono::seconds SLEEP_TIME(5);
 const std::chrono::seconds POLITENESS_SLEEP_TIME(30);
 const std::chrono::minutes BACKUP_SLEEP_TIME(5);
 
@@ -188,8 +187,9 @@ void crawling(int id){
 
 			t1 = high_resolution_clock::now();
 
-			url = local_queue[0];
-			local_queue.erase(local_queue.cbegin());
+			url = local_queue.front();
+			// url = local_queue[0];
+			local_queue.erase(local_queue.begin());
 			// urls_queue_mutex.unlock();
 
 			ckurl = url.c_str();
@@ -319,36 +319,26 @@ void crawling(int id){
 				spider.ClearOutboundLinks();
 				// html.clear();
 
-				if(local_to_queue.size() >= SIZE_LOCAL_QUEUE || urls_queue.size() < MIN_TO_KEEP_IN_QUEUE){
-					// if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
-					vector_size = local_to_queue.size();
+				// if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
+				vector_size = local_to_queue.size();
 
-					urls_queue_mutex.lock();
-					queued_url_mutex.lock();
+				urls_queue_mutex.lock();
+				queued_url_mutex.lock();
 
-					// status_log_mutex.lock();
-					// status_log << "Filling Queue" << endl;
-					// status_log_mutex.unlock();
-
-					for (i = 0; i < vector_size; i++){
-						url = local_to_queue.back();
-						if(!queued_url[url]){
-							urls_queue.push(url);
-							queued_url[url] = true;
-						}
-						local_to_queue.pop_back();
+				for (i = 0; i < vector_size; i++){
+					url = local_to_queue.back();
+					if(!queued_url[url]){
+						urls_queue.push(url);
+						queued_url[url] = true;
 					}
-
-					// status_log_mutex.lock();
-					// status_log << "Done filling queue" << endl;
-					// status_log_mutex.unlock();
-
-					queued_url_mutex.unlock();
-					urls_queue_mutex.unlock();
-
-					local_to_queue.clear();
-					// local_to_queue.shrink_to_fit();
+					local_to_queue.pop_back();
 				}
+
+				queued_url_mutex.unlock();
+				urls_queue_mutex.unlock();
+
+				local_to_queue.clear();
+				// local_to_queue.shrink_to_fit();
 
 				t2 = high_resolution_clock::now();
 

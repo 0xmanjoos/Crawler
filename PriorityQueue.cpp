@@ -14,16 +14,15 @@ void PriorityQueue::push(string url){
 }
 
 string PriorityQueue::pop(){
-	string url = this->list.front();
+	string url = "";
 
-	// if (!this->list.empty()){
-		// url = this->list.top();
-		// cout << "\tDequeueing " << url.getUrl() << endl;
-		// this->list.pop();
-	// }
+	if (!this->list.empty()){
+		url = this->list.front();
 
-	pop_heap(this->list.begin(), this->list.end(), CompareURL());
-	this->list.pop_back();
+		pop_heap(this->list.begin(), this->list.end(), CompareURL());
+
+		this->list.pop_back();
+	}
 
 	return url;
 }
