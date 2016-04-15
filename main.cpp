@@ -202,6 +202,7 @@ void crawling(int id){
 
 			t2 = high_resolution_clock::now();
 
+			last_access_mutex.lock();
 			out = last_access.find(domain.getString());
 			if (out != last_access.end()){
 				tla = last_access[domain.getString()];
@@ -223,7 +224,6 @@ void crawling(int id){
 				}
 			}
 
-			last_access_mutex.lock();
 			last_access[domain.getString()] = t2;
 			last_access_mutex.lock();
 
