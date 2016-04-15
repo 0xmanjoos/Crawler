@@ -44,7 +44,7 @@ ifstream reading_backup_queue;
 int index_file = 0, log_entrance = 0;
 string log_buffer;
 
-mutex urls_queue_mutex, queued_url_mutex, log_mutex, status_log_mutex, cout_mutex;
+mutex urls_queue_mutex, queued_url_mutex, log_mutex, status_log_mutex, cout_mutex, last_access_mutex;
 
 high_resolution_clock::time_point t0;
 
@@ -128,7 +128,6 @@ int main(){
 
 void crawling(int id){
 	int i, size_unspired, logging, dequeue_size, vector_size, url_size;
-	int loop = 0;
 	int file_index, file_size = 0;
 	double duration, total_duration;
 	bool success;
@@ -152,7 +151,7 @@ void crawling(int id){
 	html_files[id].open(filename, ios::out | ios::app);
 	filename.clear();
 
-	while (loop < 10){
+	while (true){
 
 		// Checking if local queue is empty
 		if (local_queue.empty()){
@@ -224,7 +223,9 @@ void crawling(int id){
 				}
 			}
 
+			last_access_mutex.lock();
 			last_access[domain.getString()] = t2;
+			last_access_mutex.lock();
 
 			if (!last_domain.compareStr(domain)){
 				spider.Initialize(domain.getString());
@@ -387,8 +388,6 @@ void crawling(int id){
 		}
 
 		spider.ClearSpideredUrls();
-
-		loop++;
 	}
 
 	status_log_mutex.lock();
