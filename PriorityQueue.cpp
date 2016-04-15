@@ -36,7 +36,22 @@ bool PriorityQueue::empty(){
 }
 
 string PriorityQueue::getFromVector(int i){
-	string url = this->list[i];
+	string url;
+
+	if (this->list.size() >= i){
+		url = this->list[i];
+	}
+
+	return url;
+}
+
+string PriorityQueue::popFromVector(){
+	string url;
+
+	if (!this->list.empty()){
+		url = this->list.front();
+		this->list.erase(this->list.cbegin());
+	}
 
 	return url;
 }

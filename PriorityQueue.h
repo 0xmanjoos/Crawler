@@ -40,6 +40,7 @@ public:
 	bool empty();
 	
 	string getFromVector(int i);
+	string popFromVector();
 	void clear();
 
 };

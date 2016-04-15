@@ -57,10 +57,13 @@ bool isBrDomain(string url){
 string canonicalizeUrl(string url){
 	CkString new_url;
 	CkSpider spider;
+	string canonicalized_url;
 
 	spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
 
-	return ((char*) new_url.getString());
+	canonicalized_url = new_url.getString();
+
+	return canonicalized_url;
 
 }
 
@@ -149,8 +152,11 @@ string getNormalizedUrl(string url){
 string getDomain(string url){
 	CkSpider spider;
 	CkString domain;
+	string real_domain;
 
 	spider.GetUrlDomain(url.c_str(), domain);
 
-	return domain.getString();
+	real_domain = domain.getString();
+
+	return real_domain;
 }

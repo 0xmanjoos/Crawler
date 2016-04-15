@@ -22,14 +22,15 @@
 
 #define LIMIT_MEM_LOG 500
 
-#define BACKUP_QUEUE_SIZE 200000
+#define BACKUP_QUEUE_SIZE 15000
 #define KEEPING_FROM_BACKUP 30000
-#define MIN_TO_KEEP_IN_QUEUE 3000
+#define MIN_TO_KEEP_IN_QUEUE 1000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 const std::chrono::seconds SLEEP_TIME(5);
 const std::chrono::seconds POLITENESS_SLEEP_TIME(30);
 const std::chrono::minutes BACKUP_SLEEP_TIME(5);
+// const std::chrono::seconds BACKUP_SLEEP_TIME(1);
 
 using namespace std;
 using namespace std::chrono;
@@ -117,6 +118,8 @@ int main(){
 	backup_queue.close();
 	reading_backup_queue.close();
 
+	ths.clear();
+
 	return 0;
 
 
@@ -125,6 +128,7 @@ int main(){
 
 void crawling(int id){
 	int i, size_unspired, logging, dequeue_size, vector_size, url_size;
+	int loop = 0;
 	int file_index, file_size = 0;
 	double duration, total_duration;
 	bool success;
@@ -148,15 +152,16 @@ void crawling(int id){
 	html_files[id].open(filename, ios::out | ios::app);
 	filename.clear();
 
-	while (true){
+	while (loop < 10){
 
 		// Checking if local queue is empty
 		if (local_queue.empty()){
-			// local_queue.shrink_to_fit();
+			local_queue.shrink_to_fit();
 
 			if (!urls_queue.empty()){
 				urls_queue_mutex.lock();
 				dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
+				local_queue.reserve(dequeue_size);
 				for (i = 0; i < dequeue_size; i++){
 					local_queue.push_back(urls_queue.pop());
 					// urls_queue.pop();
@@ -255,7 +260,7 @@ void crawling(int id){
 				}
 
 				buffer.clear();
-				// buffer.shrink_to_fit();
+				buffer.shrink_to_fit();
 
 				if (file_size >= LIMIT_HTML_FILE_SIZE){
 					html_files[id].close();
@@ -269,6 +274,7 @@ void crawling(int id){
 					html_files[id].open(filename, ios::out | ios::app);
 					buffer.append("|||");
 					filename.clear();
+					buffer.shrink_to_fit();
 				}
 
 				size_unspired = spider.get_NumUnspidered();
@@ -338,7 +344,7 @@ void crawling(int id){
 				urls_queue_mutex.unlock();
 
 				local_to_queue.clear();
-				// local_to_queue.shrink_to_fit();
+				local_to_queue.shrink_to_fit();
 
 				t2 = high_resolution_clock::now();
 
@@ -382,6 +388,7 @@ void crawling(int id){
 
 		spider.ClearSpideredUrls();
 
+		loop++;
 	}
 
 	status_log_mutex.lock();
@@ -442,10 +449,11 @@ void backingup_queue(){
 			// cout << queue.size() << " " << urls_queue.size() << endl;
 			queued_url_mutex.lock();
 			// cout << "Saving urls to file" << endl;
-			for (; i < urls_queue.size(); i++){
+			// for (; i < urls_queue.size(); i++){
+			while(!urls_queue.empty()){
 			// while (!queue.empty()){
 			// while (urls_queue.size() > 0){
-				url = urls_queue.getFromVector(i);
+				url = urls_queue.popFromVector();
 				backup_queue << url << endl;
 				// queued_url[url] = false;
 				// backup_queue << urls_queue.top() << endl;
@@ -476,7 +484,7 @@ void backingup_queue(){
 			// cout << "Restoring URLs" << endl;
 			for (i = 0; i < backup.size(); i++){
 				urls_queue.push(backup[i]);
-				queued_url[backup[i]] = true;
+				// queued_url[backup[i]] = true;
 			}
 			// cout << "Done restoring" << endl;
 
