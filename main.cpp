@@ -11,8 +11,8 @@
 #define NUM_THREADS 100
 #define LIMIT_SIZE_URL 20
 
-#define THREAD_QUEUE_SIZE 100
-#define SIZE_LOCAL_QUEUE 1000
+#define THREAD_QUEUE_SIZE 20
+#define SIZE_LOCAL_QUEUE 1
 
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
@@ -25,7 +25,7 @@
 
 #define BACKUP_QUEUE_SIZE 200000
 #define KEEPING_FROM_BACKUP 30000
-#define MIN_TO_KEEP_IN_QUEUE 200
+#define MIN_TO_KEEP_IN_QUEUE 3000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 const std::chrono::seconds SLEEP_TIME(10);
@@ -150,11 +150,27 @@ void crawling(int id){
 	filename.clear();
 
 	while (true){
+
 		// Checking if local queue is empty
 		if (local_queue.empty()){
-			local_queue.shrink_to_fit();
+			// local_queue.shrink_to_fit();
 
-			while (urls_queue.size() <= 0){
+			if (!urls_queue.empty()){
+				urls_queue_mutex.lock();
+				dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
+				for (i = 0; i < dequeue_size; i++){
+					local_queue.push_back(urls_queue.pop());
+					// urls_queue.pop();
+				}
+				urls_queue_mutex.unlock();
+				// Updating status log
+				status_log_mutex.lock();
+				t2 = high_resolution_clock::now();
+
+				total_duration = duration_cast<seconds>( t2 - t0 ).count();
+				status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
+				status_log_mutex.unlock();
+			} else {
 				status_log_mutex.lock();
 
 				tf = high_resolution_clock::now();
@@ -166,21 +182,6 @@ void crawling(int id){
 
 				this_thread::sleep_for(SLEEP_TIME);
 			}
-
-			urls_queue_mutex.lock();
-			dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
-			for (i = 0; i < dequeue_size; i++){
-				local_queue.push_back(urls_queue.pop());
-				// urls_queue.pop();
-			}
-			urls_queue_mutex.unlock();
-			// Updating status log
-			status_log_mutex.lock();
-			t2 = high_resolution_clock::now();
-
-			total_duration = duration_cast<seconds>( t2 - t0 ).count();
-			status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
-			status_log_mutex.unlock();
 		}
 
 		if (!local_queue.empty()){
