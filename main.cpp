@@ -11,8 +11,6 @@
 #define NUM_THREADS 100
 #define LIMIT_SIZE_URL 20
 
-#define THREAD_QUEUE_SIZE 100
-
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
 
@@ -154,46 +152,46 @@ void crawling(int id){
 	while (true){
 
 		// Checking if local queue is empty
-		if (local_queue.empty()){
-			local_queue.shrink_to_fit();
+		// if (local_queue.empty()){
+		// 	local_queue.shrink_to_fit();
 
-			if (!urls_queue.empty()){
-				urls_queue_mutex.lock();
-				dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
-				local_queue.reserve(dequeue_size);
-				for (i = 0; i < dequeue_size; i++){
-					local_queue.push_back(urls_queue.pop());
-					// urls_queue.pop();
-				}
-				urls_queue_mutex.unlock();
-				// Updating status log
-				status_log_mutex.lock();
-				t2 = high_resolution_clock::now();
+		// 	if (!urls_queue.empty()){
+		// 		urls_queue_mutex.lock();
+		// 		dequeue_size = (urls_queue.size() >= THREAD_QUEUE_SIZE)? THREAD_QUEUE_SIZE : urls_queue.size(); 
+		// 		local_queue.reserve(dequeue_size);
+		// 		for (i = 0; i < dequeue_size; i++){
+		// 			local_queue.push_back(urls_queue.pop());
+		// 			// urls_queue.pop();
+		// 		}
+		// 		urls_queue_mutex.unlock();
+		// 		// Updating status log
+		// 		status_log_mutex.lock();
+		// 		t2 = high_resolution_clock::now();
 
-				total_duration = duration_cast<seconds>( t2 - t0 ).count();
-				status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
-				status_log_mutex.unlock();
-			} else {
-				status_log_mutex.lock();
+		// 		total_duration = duration_cast<seconds>( t2 - t0 ).count();
+		// 		status_log << "Queue size: " << urls_queue.size() << " (" << total_duration << " s)" << endl;
+		// 		status_log_mutex.unlock();
+		// 	} else {
+		// 		status_log_mutex.lock();
 
-				tf = high_resolution_clock::now();
+		// 		tf = high_resolution_clock::now();
 
-				duration = duration_cast<seconds>( tf - t0 ).count();
+		// 		duration = duration_cast<seconds>( tf - t0 ).count();
 
-				status_log << "Thread " << id << " is sleeping. (" << duration << " s)" << endl;
-				status_log_mutex.unlock();
+		// 		status_log << "Thread " << id << " is sleeping. (" << duration << " s)" << endl;
+		// 		status_log_mutex.unlock();
 
-				this_thread::sleep_for(SLEEP_TIME);
-			}
-		}
+		// 		this_thread::sleep_for(SLEEP_TIME);
+		// 	}
+		// }
 
-		if (!local_queue.empty()){
+		if (!urls_queue.empty()){
 
 			t1 = high_resolution_clock::now();
 
-			url = local_queue.front();
+			url = urls_queue.pop();
 			// url = local_queue[0];
-			local_queue.erase(local_queue.begin());
+			// local_queue.erase(local_queue.begin());
 			// urls_queue_mutex.unlock();
 
 			ckurl = url.c_str();
