@@ -225,7 +225,7 @@ void crawling(int id){
 			}
 
 			last_access[domain.getString()] = t2;
-			last_access_mutex.lock();
+			last_access_mutex.unlock();
 
 			if (!last_domain.compareStr(domain)){
 				spider.Initialize(domain.getString());
