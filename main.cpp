@@ -56,9 +56,9 @@ int main(){
 	string buffer, filename;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com" 	};//, "http://www.chilkatsoft.com/",
-									// "http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
-									// "http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br"	};
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com", //"http://www.chilkatsoft.com/",
+									"http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
+									"http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br", "http://www.uol.com.br", "http://www.ig.com.br", "http://br.yahoo.com/"	};
 
 	// vector<string> initial_url = {	"http://www.joelonsoftware.com/"	};
 
@@ -212,7 +212,7 @@ void crawling(int id){
 
 						status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
 						status_log_mutex.unlock();
-						last_access[domain.getString()] = t2;
+						// last_access[domain.getString()] = t2;
 						// last_access_mutex.unlock();
 
 						this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
@@ -220,6 +220,8 @@ void crawling(int id){
 				}
 
 			}
+
+			t2 = high_resolution_clock::now();
 
 			last_access_mutex.lock();
 			last_access[domain.getString()] = t2;
