@@ -7,6 +7,7 @@
 #include "PriorityQueue.h"
 
 #define POLITENESS_TIME 30.0 // seconds
+// const double POLITENESS_TIME = 5.0; // seconds
 
 #define NUM_THREADS 100
 #define LIMIT_SIZE_URL 10
@@ -17,7 +18,7 @@
 #define HTML_FILENAME "htmls/html_files"
 #define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
 
-#define LIMIT_MEM_LOG 50
+#define LIMIT_MEM_LOG 500
 
 #define BACKUP_QUEUE_SIZE 150000
 #define KEEPING_FROM_BACKUP 30000
@@ -25,7 +26,7 @@
 #define BACKUP_QUEUE_FILENAME "backup/queue"
 
 const std::chrono::seconds SLEEP_TIME(5);
-const std::chrono::seconds POLITENESS_SLEEP_TIME(30);
+// const std::chrono::seconds POLITENESS_SLEEP_TIME(5);
 const std::chrono::minutes BACKUP_SLEEP_TIME(5);
 // const std::chrono::seconds BACKUP_SLEEP_TIME(1);
 
@@ -52,7 +53,6 @@ void restoring_backup();
 
 int main(){
 	int i;
-
 	string buffer, filename;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
@@ -183,6 +183,8 @@ void crawling(int id){
 
 			domain = spider.getBaseDomain(ckurl.getString());
 
+			// cout << "URL: " << url << "\tDomain: " << domain.getString() << endl << endl;
+
 			out = last_access.find(domain.getString());
 			if (out != last_access.end()){
 
@@ -197,7 +199,11 @@ void crawling(int id){
 
 					politeness_control = total_duration < POLITENESS_TIME;
 
+					// cout << "duration: " << total_duration  <<  " Control: " << politeness_control<< endl;
+					// cout << "waiting for: " << total_duration << " rule: " << POLITENESS_TIME<< endl;
+
 					if (!politeness_control){
+						// cout << "I'll access it!" << endl << endl;
 						last_access[domain.getString()] = t2;
 					}
 
@@ -212,14 +218,19 @@ void crawling(int id){
 
 						status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
 						status_log_mutex.unlock();
+
+						// cout << "I'll wait!" << endl << endl;
 						// last_access[domain.getString()] = t2;
 						// last_access_mutex.unlock();
-
+						std::chrono::seconds POLITENESS_SLEEP_TIME((int)(POLITENESS_TIME - total_duration));
 						this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
 					}
 				}
 
 			}
+
+			// cout << endl << "Accessing" << endl;
+			// cout << "==============" << endl << endl;
 
 			t2 = high_resolution_clock::now();
 
