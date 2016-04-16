@@ -9,7 +9,7 @@
 #define POLITENESS_TIME 30.0 // seconds
 
 #define NUM_THREADS 100
-#define LIMIT_SIZE_URL 8
+#define LIMIT_SIZE_URL 10
 
 #define LOG_FILENAME "logs/log.csv"
 #define STATUS_LOG_FILENAME "logs/status_log.txt"
@@ -17,9 +17,9 @@
 #define HTML_FILENAME "htmls/html_files"
 #define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
 
-#define LIMIT_MEM_LOG 500
+#define LIMIT_MEM_LOG 50
 
-#define BACKUP_QUEUE_SIZE 15000
+#define BACKUP_QUEUE_SIZE 150000
 #define KEEPING_FROM_BACKUP 30000
 #define MIN_TO_KEEP_IN_QUEUE 1000
 #define BACKUP_QUEUE_FILENAME "backup/queue"
@@ -72,6 +72,12 @@ int main(){
 		queued_url[getNormalizedUrl(v)] = true;
 	}
 
+	// while(urls_queue.size() > 0){
+	// 	cout << urls_queue.pop() << endl;
+	// }
+
+	// exit(0);
+
 	logs.open(LOG_FILENAME, ios::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
@@ -92,8 +98,6 @@ int main(){
 
 	backup.detach();
 	restore.detach();
-
-	// crawling(0);
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
@@ -194,7 +198,7 @@ void crawling(int id){
 					politeness_control = total_duration < POLITENESS_TIME;
 
 					if (!politeness_control){
-						last_access[domain.getString()] = t2;						
+						last_access[domain.getString()] = t2;
 					}
 
 					last_access_mutex.unlock();

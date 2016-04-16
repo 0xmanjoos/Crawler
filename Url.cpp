@@ -55,71 +55,17 @@ bool isBrDomain(string url){
 
 //Also removes "www."
 string canonicalizeUrl(string url){
-	CkString new_url;
-	CkSpider spider;
-	string canonicalized_url;
 
-	spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
+	return url;
+	// CkString new_url;
+	// CkSpider spider;
+	// string canonicalized_url;
 
-	canonicalized_url = new_url.getString();
+	// spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
 
-	return canonicalized_url;
+	// canonicalized_url = new_url.getString();
 
-}
-
-int getURLsize(string url){
-	CkString canonicalized_url;
-	string s;
-	int i = 0, size = 0;
-	vector<string> tokens;
-
-	canonicalized_url = canonicalizeUrl(url).c_str();
-	
-	s = getCleanUrl(canonicalized_url.getString());
-
-	if (s.size() <= 0){
-		return 0;
-	}
-
-	split(s, '/', tokens);
-
-
-	auto it = begin(tokens);
-	while(it != end(tokens)){
-		if (tokens[i].size() <= 0){
-			tokens.erase(tokens.cbegin()+i);
-		} else {
-			++it;
-			i++;
-		}
-	}
-
-
-	size += tokens.size() - 1;
-
-	s = tokens[0];
-	tokens.clear();
-	split(s, '.', tokens);
-
-	if (tokens[0].compare("www") == 0){
-		tokens.erase(tokens.cbegin());
-	}
-
-	it = begin(tokens);
-	i = 0;
-	while(it != end(tokens)){
-		if (tokens[i].size() <= 0){
-			tokens.erase(tokens.cbegin()+i);
-		} else {
-			++it;
-			i++;	
-		}
-	}
-
-	size += tokens.size();
-
-
-	return size;
+	// return canonicalized_url;
 
 }
 
@@ -159,4 +105,71 @@ string getDomain(string url){
 	real_domain = domain.getString();
 
 	return real_domain;
+}
+
+int getURLsize(string url){
+	CkString canonicalized_url;
+	string s;
+	int i = 0, size = 0;
+	vector<string> tokens;
+
+	// canonicalized_url = canonicalizeUrl(url).c_str();
+
+	s = getCleanUrl(url);
+
+	if (s.size() <= 0){
+		return 0;
+	}
+
+	if (s.back() != '/'){
+		s.append("/");
+	}
+
+	split(s, '/', tokens);
+
+
+	auto it = begin(tokens);
+	while(it != end(tokens)){
+		if (tokens[i].size() <= 0){
+			tokens.erase(tokens.cbegin()+i);
+		} else {
+			++it;
+			i++;
+		}
+	}
+
+
+	size += tokens.size() - 1;
+
+	if (!tokens.empty()){
+		s = tokens[0];
+	} else {
+		s = "";
+	}
+
+	tokens.clear();
+	split(s, '.', tokens);
+
+
+	if(!tokens.empty()){
+		if (tokens[0].compare("www") == 0){
+			tokens.erase(tokens.cbegin());
+		}
+	}
+
+	it = begin(tokens);
+	i = 0;
+	while(it != end(tokens)){
+		if (tokens[i].size() <= 0){
+			tokens.erase(tokens.cbegin()+i);
+		} else {
+			++it;
+			i++;	
+		}
+	}
+
+	size += tokens.size();
+
+	return size;
+
 }

@@ -9,8 +9,10 @@ PriorityQueue::~PriorityQueue(){
 }
 
 void PriorityQueue::push(string url){
-	this->list.push_back(url);
-	push_heap(this->list.begin(), this->list.end(), CompareURL());
+	if (url.size()>0){
+		this->list.push_back(url);
+		push_heap(this->list.begin(), this->list.end(), CompareURL());
+	}
 }
 
 string PriorityQueue::pop(){
