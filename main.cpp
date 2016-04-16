@@ -56,7 +56,12 @@ int main(){
 	string buffer, filename;
 
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com"	};
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com" 	};//, "http://www.chilkatsoft.com/",
+									// "http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
+									// "http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br"	};
+
+	// vector<string> initial_url = {	"http://www.joelonsoftware.com/"	};
+
 	vector<thread> ths;
 	thread backup(backingup_queue), restore;
 
@@ -64,6 +69,7 @@ int main(){
 
 	for (string v : initial_url){
 		urls_queue.push(getNormalizedUrl(v));
+		queued_url[getNormalizedUrl(v)] = true;
 	}
 
 	logs.open(LOG_FILENAME, ios::out);
@@ -86,6 +92,8 @@ int main(){
 
 	backup.detach();
 	restore.detach();
+
+	// crawling(0);
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
@@ -127,14 +135,14 @@ void crawling(int id){
 	int i, size_unspired, logging, dequeue_size, vector_size, url_size;
 	int file_index, file_size = 0;
 	double duration, total_duration;
-	bool success;
+	bool success, politeness_control;
 
 	string url, filename, buffer;
 
 	vector<string> local_queue, local_to_queue;
 
 	CkSpider spider;
-	CkString ckurl, domain, html, last_domain;
+	CkString ckurl, domain, html, last_domain = "";
 
 	high_resolution_clock::time_point t1, t2, tf, tla;
 
@@ -150,52 +158,70 @@ void crawling(int id){
 
 	while (true){
 
+		t1 = high_resolution_clock::now();
+
 		urls_queue_mutex.lock();
-		if (!urls_queue.empty()){
+		url = urls_queue.pop();
 
-			t1 = high_resolution_clock::now();
+		// status_log_mutex.lock();
 
-			url = urls_queue.pop();
+		// tf = high_resolution_clock::now();
 
-			urls_queue_mutex.unlock();
+		// duration = duration_cast<seconds>( tf - t0 ).count();
 
+		// status_log << "Queue size " << urls_queue.size() << " (" << duration << " s)" << endl;
+		// status_log_mutex.unlock();
+
+		urls_queue_mutex.unlock();
+
+		if (url.size() > 0){
 			ckurl = url.c_str();
 
 			domain = spider.getBaseDomain(ckurl.getString());
 
-			t2 = high_resolution_clock::now();
-
 			out = last_access.find(domain.getString());
 			if (out != last_access.end()){
-				last_access_mutex.lock();
-				tla = last_access[domain.getString()];
 
-				total_duration = duration_cast<seconds>(t2 - t0).count();
+				politeness_control = true;
 
-				if (duration < POLITENESS_TIME){
+				while (politeness_control) {
+					t2 = high_resolution_clock::now();
+					last_access_mutex.lock();
+					tla = last_access[domain.getString()];
 
-					status_log_mutex.lock();
+					total_duration = duration_cast<seconds>(t2 - tla).count();
 
-					tf = high_resolution_clock::now();
+					politeness_control = total_duration < POLITENESS_TIME;
 
-					duration = duration_cast<seconds>( tf - t0 ).count();
+					if (!politeness_control){
+						last_access[domain.getString()] = t2;						
+					}
 
-					status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
-					status_log_mutex.unlock();
-					last_access[domain.getString()] = t2;
 					last_access_mutex.unlock();
 
-					this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
-				} else {
-					last_access_mutex.unlock();
+					if (politeness_control){
+						status_log_mutex.lock();
+
+						tf = high_resolution_clock::now();
+
+						duration = duration_cast<seconds>( tf - t0 ).count();
+
+						status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
+						status_log_mutex.unlock();
+						last_access[domain.getString()] = t2;
+						// last_access_mutex.unlock();
+
+						this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
+					}
 				}
+
 			}
 
 			last_access_mutex.lock();
 			last_access[domain.getString()] = t2;
 			last_access_mutex.unlock();
 
-			if (!last_domain.compareStr(domain)){
+			if (last_domain.compareStr(domain)){
 				spider.Initialize(domain.getString());
 			}
 
@@ -204,10 +230,15 @@ void crawling(int id){
 			spider.AddUnspidered(ckurl.getString());
 
 			success = spider.CrawlNext();
+			// spider.CrawlNext();
+
+			// cout << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks()<< endl;
+			// cout << success << endl;
 
 			if (success) { 
+				// cout << "here" << endl;
+				
 				spider.get_LastHtml(html);
-
 				logging = html.getSizeUtf8();
 
 				buffer.append(" ");
@@ -220,7 +251,7 @@ void crawling(int id){
 
 				html_files[id] << buffer;
 
-				if (logging <= 0){
+				if (logging <= 0 ){
 					status_log_mutex.lock();
 
 					status_log << "Unable to download " << url << " " << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks() << endl;
@@ -243,13 +274,13 @@ void crawling(int id){
 					html_files[id].open(filename, ios::out | ios::app);
 					buffer.append("|||");
 					filename.clear();
-					buffer.shrink_to_fit();
 				}
 
 				size_unspired = spider.get_NumUnspidered();
 				for (i = 0; i < size_unspired; i++){
 					spider.GetUnspideredUrl(0, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
+					// cout << ckurl.getString() << " " << url << endl;
 					spider.SkipUnspidered(0);
 
 					url_size = getURLsize(url);
@@ -273,9 +304,11 @@ void crawling(int id){
 				for (i = 0; i < size_unspired; i++){
 					spider.GetOutboundLink(i, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
+					// cout << ckurl.getString() << " " << url << endl;
 
 					url_size = getURLsize(url);
-					if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
+					// if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
+					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
 						// queued_url_mutex.lock();
 						// cout_mutex.lock();
 						// cout << "queued_url" << " mutex locked" << endl;
@@ -296,6 +329,7 @@ void crawling(int id){
 
 				// if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
 				vector_size = local_to_queue.size();
+				// cout << "To queue: " << vector_size << endl;
 
 				urls_queue_mutex.lock();
 				queued_url_mutex.lock();
@@ -314,18 +348,18 @@ void crawling(int id){
 
 				local_to_queue.clear();
 				local_to_queue.shrink_to_fit();
-
-				t2 = high_resolution_clock::now();
-
-				duration = duration_cast<milliseconds>( t2 - t1 ).count();
-				total_duration = duration_cast<seconds>( t2 - t0 ).count();
-
+				
 				log_mutex.lock();
 				// cout_mutex.lock();
 				// cout << "log" << " mutex locked" << endl;
 				// cout_mutex.unlock();
 				
 				// logs << duration << "," << logging << endl;
+
+				t2 = high_resolution_clock::now();
+
+				duration = duration_cast<milliseconds>( t2 - t1 ).count();
+				total_duration = duration_cast<seconds>( t2 - t0 ).count();
 
 				log_buffer.append(to_string(total_duration));
 				log_buffer.append(",");
@@ -356,15 +390,26 @@ void crawling(int id){
 				status_log << "Queue size " << urls_queue.size() << " (" << duration << " s)" << endl;
 				status_log_mutex.unlock();
 
-			} // else {
-			// 	status_log_mutex.lock();
-			// 	status_log << "Failed to load " << url << endl;
-			// 	status_log_mutex.unlock();
-			// }
+			}  else {
+				// cout_mutex.lock();
+				// cout << "Failed to load " << url << endl;
+				// cout_mutex.unlock();
 
-			// spider.ClearFailedUrls();
+				status_log_mutex.lock();
+
+				status_log << "Fail to access " << url << " " << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks() << endl;
+
+				status_log_mutex.unlock();
+
+				// std::cout << spider.lastErrorText() << "\r\n";
+
+				// exit(0);
+			}
+
+			spider.ClearFailedUrls();
 		} else {
-			urls_queue_mutex.unlock();
+			// urls_queue_mutex.unlock();
+			// cout << "Nothing there" << endl;
 			status_log_mutex.lock();
 
 			tf = high_resolution_clock::now();
