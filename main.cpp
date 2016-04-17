@@ -58,7 +58,9 @@ int main(){
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com", //"http://www.chilkatsoft.com/",
 									"http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
-									"http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br", "http://www.uol.com.br", "http://www.ig.com.br", "http://br.yahoo.com/"	};
+									"http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br", "http://www.uol.com.br",
+									"http://www.ig.com.br", "http://br.yahoo.com/", "http://www.decolar.com", "http://www.tripadvisor.com.br",
+									"http://www.tam.com.br", "http://www.voeazul.com.br", "http://www.cvc.com.br"};
 
 	// vector<string> initial_url = {	"http://www.joelonsoftware.com/"	};
 
@@ -238,9 +240,9 @@ void crawling(int id){
 			last_access[domain.getString()] = t2;
 			last_access_mutex.unlock();
 
-			if (last_domain.compareStr(domain)){
+			// if (last_domain.compareStr(domain)){
 				spider.Initialize(domain.getString());
-			}
+			// }
 
 			last_domain = domain;
 
