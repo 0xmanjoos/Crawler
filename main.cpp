@@ -181,7 +181,7 @@ void crawling(int id){
 		if (url.size() > 0){
 			ckurl = url.c_str();
 
-			domain = spider.getBaseDomain(ckurl.getString());
+			spider.GetUrlDomain(ckurl.getString(), domain);
 
 			// cout << "URL: " << url << "\tDomain: " << domain.getString() << endl << endl;
 
