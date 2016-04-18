@@ -13,18 +13,6 @@ struct CompareURL {
 	}
 };
 
-// Allowing access to priority_queue container (ref: http://stackoverflow.com/a/1385520)
-// It makes backing up queue faster
-template <class T, class S, class C>
-    S& Container(priority_queue<T, S, C>& q) {
-        struct HackedQueue : private priority_queue<T, S, C> {
-            static S& Container(priority_queue<T, S, C>& q) {
-                return q.*&HackedQueue::c;
-            }
-        };
-    return HackedQueue::Container(q);
-}
-
 class PriorityQueue{
 
 private:
@@ -33,6 +21,7 @@ private:
 public:
 	PriorityQueue();
 	~PriorityQueue();
+	
 	void push(string url);
 	string pop();
 

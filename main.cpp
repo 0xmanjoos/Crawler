@@ -1,85 +1,59 @@
-#include <iostream>
-#include <fstream>
-#include <chrono> // C++11 Time lib
-#include <unordered_map> // C++11 Hash Table
-#include <thread> // C++1 Threads
-#include <mutex> // C++11 mutex
-#include "PriorityQueue.h"
+#include "Define.h"
 
-#define POLITENESS_TIME 30.0 // seconds
-// const double POLITENESS_TIME = 5.0; // seconds
-
-#define NUM_THREADS 100
-#define LIMIT_SIZE_URL 10
-
-#define LOG_FILENAME "logs/log.csv"
-#define STATUS_LOG_FILENAME "logs/status_log.txt"
-
-#define HTML_FILENAME "htmls/html_files"
-#define LIMIT_HTML_FILE_SIZE 500000000 // 300 MB
-
-#define LIMIT_MEM_LOG 500
-
-#define BACKUP_QUEUE_SIZE 150000
-#define KEEPING_FROM_BACKUP 30000
-#define MIN_TO_KEEP_IN_QUEUE 1000
-#define BACKUP_QUEUE_FILENAME "backup/queue"
-
+// File to wait when queue is empty
 const std::chrono::seconds SLEEP_TIME(5);
-// const std::chrono::seconds POLITENESS_SLEEP_TIME(5);
+// Time backup and restore thread sleep
 const std::chrono::minutes BACKUP_SLEEP_TIME(5);
-// const std::chrono::seconds BACKUP_SLEEP_TIME(1);
 
 using namespace std;
 using namespace std::chrono;
 
-// priority_queue<string, std::vector<string>, CompareURL> urls_queue;
-PriorityQueue urls_queue;
-unordered_map<string, bool> queued_url;
-unordered_map<string, high_resolution_clock::time_point> last_access;
-ofstream logs, status_log, backup_queue, html_files[NUM_THREADS];
-ifstream reading_backup_queue;
-int index_file = 0, log_entrance = 0;
+PriorityQueue urls_queue; // Priority Queue 
+unordered_map<string, bool> queued_url; // URLs in queue (or that have been in queue)
+unordered_map<string, high_resolution_clock::time_point> last_access; // Time of last access to domain
+ofstream logs, status_log, backup_queue, html_files[NUM_THREADS]; // Files
+ifstream reading_backup_queue; // Restore queue file
+int log_entrance = 0; // Log entraces counter
 string log_buffer;
 
-mutex urls_queue_mutex, queued_url_mutex, log_mutex, status_log_mutex, cout_mutex, last_access_mutex;
+mutex urls_queue_mutex, queued_url_mutex, log_mutex, status_log_mutex, last_access_mutex; // Mutexes
 
 high_resolution_clock::time_point t0;
 
 
+// Actual crawling
 void crawling(int id);
+// Queue's backup
 void backingup_queue();
+// Queue restoring
 void restoring_backup();
 
 int main(){
 	int i;
-	string buffer, filename;
+	string filename;
 
+	// Some other links where added because I was getting a lot of fail access
 	vector<string> initial_url = {	"http://jogos.uol.com.br", "http://www.ojogos.com.br", "http://www.papajogos.com.br",
-									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com", //"http://www.chilkatsoft.com/",
+									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com", 
 									"http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
 									"http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br", "http://www.uol.com.br",
 									"http://www.ig.com.br", "http://br.yahoo.com/", "http://www.decolar.com", "http://www.tripadvisor.com.br",
 									"http://www.tam.com.br", "http://www.voeazul.com.br", "http://www.cvc.com.br"};
 
-	// vector<string> initial_url = {	"http://www.joelonsoftware.com/"	};
-
 	vector<thread> ths;
 	thread backup(backingup_queue), restore;
 
-	// cout << "here";
 
+	// Time program started
+	t0 = high_resolution_clock::now();
+
+	// Initializing queue
 	for (string v : initial_url){
 		urls_queue.push(getNormalizedUrl(v));
 		queued_url[getNormalizedUrl(v)] = true;
 	}
 
-	// while(urls_queue.size() > 0){
-	// 	cout << urls_queue.pop() << endl;
-	// }
-
-	// exit(0);
-
+	// Initializing log
 	logs.open(LOG_FILENAME, ios::out);
 	logs << "time from beginning(s),time spent(ms),size(bytes)" << endl;
 
@@ -89,15 +63,12 @@ int main(){
 	backup_queue.close();
 	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
 
-	buffer.append("|||");
-
-	t0 = high_resolution_clock::now();
-
 	restore = thread(restoring_backup);
 
 	status_log << "Initial queue size: " << urls_queue.size() << endl;
 	status_log << "Creating threads" << endl;
 
+	// Detaching threads, they will run in background
 	backup.detach();
 	restore.detach();
 
@@ -133,27 +104,27 @@ int main(){
 
 	return 0;
 
-
-	////////////////////////////////////////////////////////
 }
 
 void crawling(int id){
-	int i, size_unspired, logging, dequeue_size, vector_size, url_size;
+	int i, size_unspired, logging, vector_size, url_size;
 	int file_index, file_size = 0;
 	double duration, total_duration;
 	bool success, politeness_control;
 
 	string url, filename, buffer;
 
-	vector<string> local_queue, local_to_queue;
+	vector<string> local_to_queue;
 
 	CkSpider spider;
-	CkString ckurl, domain, html, last_domain = "";
+	CkString ckurl, domain, html;
 
 	high_resolution_clock::time_point t1, t2, tf, tla;
 
 	unordered_map<std::string,high_resolution_clock::time_point>::const_iterator out;
 
+	
+	// Reopening file to append content
 	filename.append(HTML_FILENAME);
 	filename.append("-");
 	filename.append(to_string(id));
@@ -162,56 +133,58 @@ void crawling(int id){
 	html_files[id].open(filename, ios::out | ios::app);
 	filename.clear();
 
+	// Main loop
 	while (true){
 
+		// Iteration start
 		t1 = high_resolution_clock::now();
 
+		// Taking queue's root
 		urls_queue_mutex.lock();
+		
 		url = urls_queue.pop();
-
-		// status_log_mutex.lock();
-
-		// tf = high_resolution_clock::now();
-
-		// duration = duration_cast<seconds>( tf - t0 ).count();
-
-		// status_log << "Queue size " << urls_queue.size() << " (" << duration << " s)" << endl;
-		// status_log_mutex.unlock();
 
 		urls_queue_mutex.unlock();
 
+		// If queue is empty, it returns an empty string, therefore it's necessary to check returns size.
 		if (url.size() > 0){
+			// Recieved a valid URL
+
 			ckurl = url.c_str();
 
+			// Get URL's domain
 			spider.GetUrlDomain(ckurl.getString(), domain);
 
-			// cout << "URL: " << url << "\tDomain: " << domain.getString() << endl << endl;
-
+			// Checks last time URL's domain was accessed
 			out = last_access.find(domain.getString());
 			if (out != last_access.end()){
 
 				politeness_control = true;
 
+				// Loop is necessary because other thread may access that domain while this one is waiting
 				while (politeness_control) {
+					// Time now
 					t2 = high_resolution_clock::now();
+
 					last_access_mutex.lock();
+
+					// Time domain was last accessed
 					tla = last_access[domain.getString()];
 
+					// Time elapsed
 					total_duration = duration_cast<seconds>(t2 - tla).count();
 
 					politeness_control = total_duration < POLITENESS_TIME;
 
-					// cout << "duration: " << total_duration  <<  " Control: " << politeness_control<< endl;
-					// cout << "waiting for: " << total_duration << " rule: " << POLITENESS_TIME<< endl;
-
 					if (!politeness_control){
-						// cout << "I'll access it!" << endl << endl;
+						// In case it has elapsed more than POLITENESS_TIME, update last access so other thread do not try to access this domain
 						last_access[domain.getString()] = t2;
 					}
 
 					last_access_mutex.unlock();
 
 					if (politeness_control){
+						// In case it has elapsed less than POLITENESS_TIME, sleep the difference
 						status_log_mutex.lock();
 
 						tf = high_resolution_clock::now();
@@ -221,9 +194,6 @@ void crawling(int id){
 						status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
 						status_log_mutex.unlock();
 
-						// cout << "I'll wait!" << endl << endl;
-						// last_access[domain.getString()] = t2;
-						// last_access_mutex.unlock();
 						std::chrono::seconds POLITENESS_SLEEP_TIME((int)(POLITENESS_TIME - total_duration));
 						this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
 					}
@@ -231,33 +201,23 @@ void crawling(int id){
 
 			}
 
-			// cout << endl << "Accessing" << endl;
-			// cout << "==============" << endl << endl;
-
 			t2 = high_resolution_clock::now();
 
 			last_access_mutex.lock();
+			// Updating time of last access
 			last_access[domain.getString()] = t2;
 			last_access_mutex.unlock();
 
-			// if (last_domain.compareStr(domain)){
-				spider.Initialize(domain.getString());
-			// }
-
-			last_domain = domain;
+			spider.Initialize(domain.getString());
 
 			spider.AddUnspidered(ckurl.getString());
 
 			success = spider.CrawlNext();
-			// spider.CrawlNext();
-
-			// cout << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks()<< endl;
-			// cout << success << endl;
 
 			if (success) { 
-				// cout << "here" << endl;
-				
 				spider.get_LastHtml(html);
+
+				// Getting HTML's size, in bytes
 				logging = html.getSizeUtf8();
 
 				buffer.append(" ");
@@ -282,6 +242,7 @@ void crawling(int id){
 				buffer.shrink_to_fit();
 
 				if (file_size >= LIMIT_HTML_FILE_SIZE){
+					// If file is bigger than limit, close file and open a new one
 					html_files[id].close();
 					file_size = 0;
 					file_index++;
@@ -295,60 +256,42 @@ void crawling(int id){
 					filename.clear();
 				}
 
+				// Saving unspired links to local queue
 				size_unspired = spider.get_NumUnspidered();
 				for (i = 0; i < size_unspired; i++){
 					spider.GetUnspideredUrl(0, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
-					// cout << ckurl.getString() << " " << url << endl;
 					spider.SkipUnspidered(0);
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-						// queued_url_mutex.lock();
-						// cout_mutex.lock();
-						// cout << "queued_url" << " mutex locked" << endl;
-						// cout_mutex.unlock();
 						if (!queued_url[url]){
 							local_to_queue.push_back(url);
-							// queued_url[url] =  true;
 						} 
-						// cout_mutex.lock();
-						// cout << "queued_url" << " mutex unlocked" << endl;
-						// cout_mutex.unlock();
-						// queued_url_mutex.unlock();
 					}
 				}
 
+				// Saving outbound links to local queue
 				size_unspired = spider.get_NumOutboundLinks();
 				for (i = 0; i < size_unspired; i++){
 					spider.GetOutboundLink(i, ckurl);
 					url = getNormalizedUrl(ckurl.getString());
-					// cout << ckurl.getString() << " " << url << endl;
 
 					url_size = getURLsize(url);
-					// if (url_size > 0 && url_size <= LIMIT_SIZE_URL && isBrDomain(url)){
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-						// queued_url_mutex.lock();
-						// cout_mutex.lock();
-						// cout << "queued_url" << " mutex locked" << endl;
-						// cout_mutex.unlock();
 						if (!queued_url[url]){
 							local_to_queue.push_back(url);
-							// queued_url.erase(url);
 						}
-						// cout_mutex.lock();
-						// cout << "queued_url" << " mutex unlocked" << endl;
-						// cout_mutex.unlock();
-						// queued_url_mutex.unlock();
 					}
 				}
 
 				spider.ClearOutboundLinks();
-				// html.clear();
 
-				// if (urls_queue.size() <= BACKUP_QUEUE_SIZE){
+				/*	After having both unspired and outbound links
+					push all of them to priority queue
+				*/
+
 				vector_size = local_to_queue.size();
-				// cout << "To queue: " << vector_size << endl;
 
 				urls_queue_mutex.lock();
 				queued_url_mutex.lock();
@@ -368,12 +311,8 @@ void crawling(int id){
 				local_to_queue.clear();
 				local_to_queue.shrink_to_fit();
 				
+				// Saving log
 				log_mutex.lock();
-				// cout_mutex.lock();
-				// cout << "log" << " mutex locked" << endl;
-				// cout_mutex.unlock();
-				
-				// logs << duration << "," << logging << endl;
 
 				t2 = high_resolution_clock::now();
 
@@ -395,9 +334,6 @@ void crawling(int id){
 
 				}
 
-				// cout_mutex.lock();
-				// cout << "log" << " mutex unlocked" << endl;
-				// cout_mutex.unlock();
 				log_mutex.unlock();
 
 				status_log_mutex.lock();
@@ -410,25 +346,19 @@ void crawling(int id){
 				status_log_mutex.unlock();
 
 			}  else {
-				// cout_mutex.lock();
-				// cout << "Failed to load " << url << endl;
-				// cout_mutex.unlock();
-
+				// crawlnext failed to load URL
 				status_log_mutex.lock();
 
 				status_log << "Fail to access " << url << " " << spider.get_NumUnspidered() << " " << spider.get_NumOutboundLinks() << endl;
 
 				status_log_mutex.unlock();
 
-				// std::cout << spider.lastErrorText() << "\r\n";
-
-				// exit(0);
 			}
 
 			spider.ClearFailedUrls();
 		} else {
-			// urls_queue_mutex.unlock();
-			// cout << "Nothing there" << endl;
+			// Queue returned and URL with size 0, which means queue is empty
+			// Thread sleeps for a while so queue may fill
 			status_log_mutex.lock();
 
 			tf = high_resolution_clock::now();
@@ -445,18 +375,12 @@ void crawling(int id){
 	}
 
 	status_log_mutex.lock();
-	// cout_mutex.lock();
-	// cout << "status_log" << " mutex locked" << endl;
-	// cout_mutex.unlock();
 
 	tf = high_resolution_clock::now();
 
 	duration = duration_cast<seconds>( tf - t0 ).count();
 
 	status_log << "Thread " << i << " is dead after " << duration << " s of execution." << endl;
-	// cout_mutex.lock();
-	// cout << "status_log" << " mutex unlocked" << endl;
-	// cout_mutex.unlock();
 	status_log_mutex.unlock();
 
 }
@@ -483,63 +407,28 @@ void backingup_queue(){
 			status_log << endl << "Backing up queue (" << total_duration << " s)" << endl;
 			status_log_mutex.unlock();
 
-			// queue_size = urls_queue.size();
-
-			// vector<string> &queue = Container(urls_queue);
-
-			// cout << queue.size() << " " << urls_queue.size() << endl;
-
+			// Checks if queue has more than KEEPING_FROM_BACKUP elemens
 			size_to_keep = (urls_queue.size() >= KEEPING_FROM_BACKUP) ? KEEPING_FROM_BACKUP : urls_queue.size();
-			// cout << "Backing up urls" << endl;
+
+			// Saving URLs
 			for (i = 0; i < size_to_keep; i++){
 				backup.push_back(urls_queue.getFromVector(i));
-				// v.push_back(urls_queue.top());
-				// urls_queue.pop();
-				// queue.erase(queue.cbegin());
 			}
-			// cout << "Done backing up" << endl;
 
-			// cout << queue.size() << " " << urls_queue.size() << endl;
 			queued_url_mutex.lock();
-			// cout << "Saving urls to file" << endl;
-			// for (; i < urls_queue.size(); i++){
+
+			// Writing URLs into file
 			while(!urls_queue.empty()){
-			// while (!queue.empty()){
-			// while (urls_queue.size() > 0){
 				url = urls_queue.popFromVector();
 				backup_queue << url << endl;
-				// queued_url[url] = false;
-				// backup_queue << urls_queue.top() << endl;
-				// urls_queue.pop();
-				// queue.erase(queue.cbegin());
 			}
-			// cout << "Done saving" << endl;
 
-			// queue.clear();
-			// queue.shrink_to_fit();
-
-			// cout << "Cleaning heap" << endl;
 			urls_queue.clear();
-			// cout << "Done cleaning" << endl;
 
-			// cout << "Cleaning hash" << endl;
-			// queued_url.clear();
-			// queued_url = unordered_map<string, bool>();
-			// cout << "Done cleaning" << endl;
-			// queued_url.reserve(backup.size());
-
-			// cout << &urls_queue << " ";
-
-			// urls_queue = priority_queue<string, std::vector<string>, CompareURL>();
-
-			// cout << &urls_queue << endl;
-
-			// cout << "Restoring URLs" << endl;
+			// Restoring saved URLs
 			for (i = 0; i < backup.size(); i++){
 				urls_queue.push(backup[i]);
-				// queued_url[backup[i]] = true;
 			}
-			// cout << "Done restoring" << endl;
 
 			queued_url_mutex.unlock();
 
@@ -550,7 +439,7 @@ void backingup_queue(){
 			t2 = high_resolution_clock::now();
 
 			total_duration = duration_cast<seconds>( t2 - t1 ).count();
-			// status_log << "Done backing up queue (total duration: " << total_duration << " s)" << endl << endl;
+			status_log << "Done backing up queue (total duration: " << total_duration << " s)" << endl << endl;
 			status_log_mutex.unlock();
 
 			backup_queue.close();
@@ -582,6 +471,7 @@ void restoring_backup(){
 
 			urls_queue_mutex.lock();
 
+			// Restoring URLs from file
 			while(getline(reading_backup_queue,url) && i < KEEPING_FROM_BACKUP && urls_queue.size() < BACKUP_QUEUE_SIZE){
 				urls_queue.push(url);
 				i++;

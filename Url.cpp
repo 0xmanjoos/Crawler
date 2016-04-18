@@ -1,5 +1,6 @@
 #include "Url.h"
 
+// Splits a string "s" in "c"
 void split(const string& s, char c, vector<string>& v) {
 	string::size_type i = 0;
 	string::size_type j = s.find(c);
@@ -39,6 +40,7 @@ string getCleanUrl(string url){
 	return new_url;
 }
 
+// Checks if there is ".br" in domain
 bool isBrDomain(string url){
 	string domain = getDomain(url);
 	string delimitation (".br");
@@ -53,31 +55,9 @@ bool isBrDomain(string url){
 
 }
 
-//Also removes "www."
-string canonicalizeUrl(string url){
-
-	return url;
-	// CkString new_url;
-	// CkSpider spider;
-	// string canonicalized_url;
-
-	// spider.CanonicalizeUrl(url.c_str(), new_url); // Canonicalizing URL
-
-	// canonicalized_url = new_url.getString();
-
-	// return canonicalized_url;
-
-}
-
-
+// Normalizes URL, removing "www." and last "/"
 string getNormalizedUrl(string url){
 	string delimitation ("www.");
-
-	// return url;
-
-	// url = canonicalizeUrl(url);
-
-	// return url;
 
 	size_t found = url.find(delimitation); // Locate the position where "www." starts in the url
 	// Test if "www." is within the url
@@ -95,6 +75,8 @@ string getNormalizedUrl(string url){
 	return url;
 }
 
+
+// Gets URL's domain
 string getDomain(string url){
 	CkSpider spider;
 	CkString domain;
@@ -107,16 +89,17 @@ string getDomain(string url){
 	return real_domain;
 }
 
+// Calculates URL size
 int getURLsize(string url){
 	CkString canonicalized_url;
 	string s;
 	int i = 0, size = 0;
 	vector<string> tokens;
 
-	// canonicalized_url = canonicalizeUrl(url).c_str();
-
+	// Remove "http[s]?://" from url
 	s = getCleanUrl(url);
 
+	// If url is empty, invalid url, returns 0
 	if (s.size() <= 0){
 		return 0;
 	}
@@ -125,9 +108,12 @@ int getURLsize(string url){
 		s.append("/");
 	}
 
+	/* Couting "/" */
+
+	// Splits url in "/"
 	split(s, '/', tokens);
 
-
+	// Removes any empty token
 	auto it = begin(tokens);
 	while(it != end(tokens)){
 		if (tokens[i].size() <= 0){
@@ -138,9 +124,11 @@ int getURLsize(string url){
 		}
 	}
 
-
+	// Number of tokens means number os depth in path.
+	//-1 because first part of URL (before first /) will also be analyzed
 	size += tokens.size() - 1;
 
+	// Gets first part of URL (before first /)
 	if (!tokens.empty()){
 		s = tokens[0];
 	} else {
@@ -148,15 +136,21 @@ int getURLsize(string url){
 	}
 
 	tokens.clear();
+
+	/* Couting "." */
+
+	// Splits on "."
 	split(s, '.', tokens);
 
 
+	// Removes "www"
 	if(!tokens.empty()){
 		if (tokens[0].compare("www") == 0){
 			tokens.erase(tokens.cbegin());
 		}
 	}
 
+	// Removes any empty token
 	it = begin(tokens);
 	i = 0;
 	while(it != end(tokens)){
@@ -168,6 +162,7 @@ int getURLsize(string url){
 		}
 	}
 
+	// Number of tokens is number of "." of first part of URL (before first /)
 	size += tokens.size();
 
 	return size;

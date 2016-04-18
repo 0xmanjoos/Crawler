@@ -15,6 +15,7 @@ void PriorityQueue::push(string url){
 	}
 }
 
+// In case queue is empty, returns an empty string
 string PriorityQueue::pop(){
 	string url = "";
 
@@ -37,8 +38,9 @@ bool PriorityQueue::empty(){
 	return this->list.empty();
 }
 
+// In case i isn't in queue, returns empty string
 string PriorityQueue::getFromVector(int i){
-	string url;
+	string url = "";
 
 	if (this->list.size() >= i){
 		url = this->list[i];
@@ -47,6 +49,7 @@ string PriorityQueue::getFromVector(int i){
 	return url;
 }
 
+// Returns first element in vector
 string PriorityQueue::popFromVector(){
 	string url;
 
@@ -58,6 +61,7 @@ string PriorityQueue::popFromVector(){
 	return url;
 }
 
+// Remove all elements
 void PriorityQueue::clear(){
 	this->list.clear();
 	this->list.shrink_to_fit();
