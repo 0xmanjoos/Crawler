@@ -28,6 +28,8 @@ void backingup_queue();
 // Queue restoring
 void restoring_backup();
 
+string cleanHTML(string html);
+
 int main(){
 	int i;
 	string filename;
@@ -37,11 +39,10 @@ int main(){
 									"http://www.gamevicio.com", "http://g1.globo.com/tecnologia", "http://globo.com", 
 									"http://www.gamesbrasil.com.br", "http://br.ign.com", "http://www.comboinfinito.com.br/",
 									"http://www.brasilgamer.com.br", "http://gizmodo.uol.com.br", "http://www.uol.com.br",
-									"http://www.ig.com.br", "http://br.yahoo.com/", "http://www.decolar.com", "http://www.tripadvisor.com.br",
-									"http://www.tam.com.br", "http://www.voeazul.com.br", "http://www.cvc.com.br"};
+									"http://www.ig.com.br", "http://br.yahoo.com/"};
 
 	vector<thread> ths;
-	thread backup(backingup_queue), restore;
+	thread backup(backingup_queue);//, restore;
 
 
 	// Time program started
@@ -63,14 +64,14 @@ int main(){
 	backup_queue.close();
 	reading_backup_queue.open(BACKUP_QUEUE_FILENAME);
 
-	restore = thread(restoring_backup);
+	// restore = thread(restoring_backup);
 
 	status_log << "Initial queue size: " << urls_queue.size() << endl;
 	status_log << "Creating threads" << endl;
 
 	// Detaching threads, they will run in background
 	backup.detach();
-	restore.detach();
+	// restore.detach();
 
 	for (i = 0; i < NUM_THREADS; i++){
 		// Opening files
@@ -156,57 +157,57 @@ void crawling(int id){
 			spider.GetUrlDomain(ckurl.getString(), domain);
 
 			// Checks last time URL's domain was accessed
-			out = last_access.find(domain.getString());
-			if (out != last_access.end()){
+			// out = last_access.find(domain.getString());
+			// if (out != last_access.end()){
 
-				politeness_control = true;
+			// 	politeness_control = true;
 
-				// Loop is necessary because other thread may access that domain while this one is waiting
-				while (politeness_control) {
-					// Time now
-					t2 = high_resolution_clock::now();
+			// 	// Loop is necessary because other thread may access that domain while this one is waiting
+			// 	while (politeness_control) {
+			// 		// Time now
+			// 		t2 = high_resolution_clock::now();
 
-					last_access_mutex.lock();
+			// 		last_access_mutex.lock();
 
-					// Time domain was last accessed
-					tla = last_access[domain.getString()];
+			// 		// Time domain was last accessed
+			// 		tla = last_access[domain.getString()];
 
-					// Time elapsed
-					total_duration = duration_cast<seconds>(t2 - tla).count();
+			// 		// Time elapsed
+			// 		total_duration = duration_cast<seconds>(t2 - tla).count();
 
-					politeness_control = total_duration < POLITENESS_TIME;
+			// 		politeness_control = total_duration < POLITENESS_TIME;
 
-					if (!politeness_control){
-						// In case it has elapsed more than POLITENESS_TIME, update last access so other thread do not try to access this domain
-						last_access[domain.getString()] = t2;
-					}
+			// 		if (!politeness_control){
+			// 			// In case it has elapsed more than POLITENESS_TIME, update last access so other thread do not try to access this domain
+			// 			last_access[domain.getString()] = t2;
+			// 		}
 
-					last_access_mutex.unlock();
+			// 		last_access_mutex.unlock();
 
-					if (politeness_control){
-						// In case it has elapsed less than POLITENESS_TIME, sleep the difference
-						status_log_mutex.lock();
+			// 		if (politeness_control){
+			// 			// In case it has elapsed less than POLITENESS_TIME, sleep the difference
+			// 			status_log_mutex.lock();
 
-						tf = high_resolution_clock::now();
+			// 			tf = high_resolution_clock::now();
 
-						duration = duration_cast<seconds>( tf - t0 ).count();
+			// 			duration = duration_cast<seconds>( tf - t0 ).count();
 
-						status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
-						status_log_mutex.unlock();
+			// 			status_log << "Thread " << id << " is having its politeness sleep. (" << duration << " s)" << endl;
+			// 			status_log_mutex.unlock();
 
-						std::chrono::seconds POLITENESS_SLEEP_TIME((int)(POLITENESS_TIME - total_duration));
-						this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
-					}
-				}
+			// 			std::chrono::seconds POLITENESS_SLEEP_TIME((int)(POLITENESS_TIME - total_duration));
+			// 			this_thread::sleep_for(std::chrono::seconds(POLITENESS_SLEEP_TIME));
+			// 		}
+			// 	}
 
-			}
+			// }
 
-			t2 = high_resolution_clock::now();
+			// t2 = high_resolution_clock::now();
 
-			last_access_mutex.lock();
-			// Updating time of last access
-			last_access[domain.getString()] = t2;
-			last_access_mutex.unlock();
+			// last_access_mutex.lock();
+			// // Updating time of last access
+			// last_access[domain.getString()] = t2;
+			// last_access_mutex.unlock();
 
 			spider.Initialize(domain.getString());
 
@@ -223,7 +224,7 @@ void crawling(int id){
 				buffer.append(" ");
 				buffer.append(url);
 				buffer.append(" | ");
-				buffer.append(html.getString());
+				buffer.append(cleanHTML(html.getString()));
 				buffer.append(" |||");
 
 				file_size+=buffer.size();
@@ -265,7 +266,7 @@ void crawling(int id){
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-						if (!queued_url[url]){
+						if (!queued_url[url] && isBrDomain(url)){
 							local_to_queue.push_back(url);
 						} 
 					}
@@ -279,7 +280,7 @@ void crawling(int id){
 
 					url_size = getURLsize(url);
 					if (url_size > 0 && url_size <= LIMIT_SIZE_URL){
-						if (!queued_url[url]){
+						if (!queued_url[url] && isBrDomain(url)){
 							local_to_queue.push_back(url);
 						}
 					}
@@ -418,10 +419,10 @@ void backingup_queue(){
 			queued_url_mutex.lock();
 
 			// Writing URLs into file
-			while(!urls_queue.empty()){
-				url = urls_queue.popFromVector();
-				backup_queue << url << endl;
-			}
+			// while(!urls_queue.empty()){
+			// 	url = urls_queue.popFromVector();
+			// 	backup_queue << url << endl;
+			// }
 
 			urls_queue.clear();
 
@@ -489,4 +490,17 @@ void restoring_backup(){
 
 		this_thread::sleep_for(BACKUP_SLEEP_TIME);
 	}
+}
+
+string cleanHTML(string html){
+	string new_html = html;
+	size_t found = new_html.find("|");
+
+	while(found != std::string::npos){
+		new_html.replace(found,1,"*");
+
+		found = new_html.find("|");
+	}
+
+	return new_html;
 }

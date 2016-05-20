@@ -51,7 +51,30 @@ bool isBrDomain(string url){
 
 	size_t found = domain.find(delimitation);
 
-	return (found == (domain.size()-delimitation.size()));
+	if (found == (domain.size()-delimitation.size())){
+		return true;
+	}
+
+	delimitation = "http://";
+
+	found = domain.find(delimitation);
+
+	if (found!=std::string::npos){
+		if (!found){
+			domain = domain.erase(found,delimitation.size());
+		}
+	}
+
+	delimitation = "br.";
+
+	found = domain.find(delimitation);
+
+	if (found!=std::string::npos){
+		return true;
+	}
+
+	return false;
+
 
 }
 
